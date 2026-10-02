@@ -8,6 +8,14 @@
   "type": "module",
   "main": "dist/index.mjs",
   "types": "dist/index.d.ts",
+  "imports": {
+    "#jsx-runtime": "./dist/jsx-runtime.mjs",
+    "#jsx-dev-runtime": "./dist/jsx-dev-runtime.mjs"
+  },
+  "exports": {
+    "./jsx-runtime": "./dist/jsx-runtime.mjs",
+    "./jsx-dev-runtime": "./dist/jsx-dev-runtime.mjs"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
