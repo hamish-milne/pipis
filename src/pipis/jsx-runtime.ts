@@ -16,11 +16,15 @@ export const jsx = (type: Component, props: ChildrenProp): JSXElement =>
 export const jsxs = jsx;
 
 const PLACEHOLDER = Symbol();
-export namespace JSX {
-  export type Element = JSXElement;
-  export type IntrinsicElements = CoreIntrinsicElements;
-  export interface IntrinsicAttributes {
-    // Needed to properly type-check children
-    readonly [PLACEHOLDER]?: unknown;
+// `declare global` is required so consumers get `JSX.IntrinsicElements` etc. even when their
+// tsconfig/module resolution doesn't pick up this module's local types for `jsxImportSource`.
+declare global {
+  namespace JSX {
+    type Element = JSXElement;
+    type IntrinsicElements = CoreIntrinsicElements;
+    interface IntrinsicAttributes {
+      // Needed to properly type-check children
+      readonly [PLACEHOLDER]?: unknown;
+    }
   }
 }
