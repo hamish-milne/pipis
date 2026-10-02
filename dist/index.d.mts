@@ -1,4 +1,4 @@
-import { _ as moveNode, a as IntrinsicElements, b as textNode, c as JSXSibling, d as Reactive, f as RefProp, g as isReactive, h as emptyElement, i as Fragment, l as MaybeReactive, m as createMarker, n as Cleanup, o as JSXElement, p as createElement, r as Content, s as JSXParent, t as ChildrenProp, u as REACTIVE, v as setRef, y as subscribe } from "./core-BV7038zv.mjs";
+import { _ as moveNode, a as Fragment, b as textNode, c as JSXSibling, d as Reactive, f as RefProp, g as isReactive, h as emptyElement, i as CoreIntrinsicElements, l as MaybeReactive, m as createMarker, n as Cleanup, o as JSXElement, p as createElement, r as Content, s as JSXParent, t as ChildrenProp, u as REACTIVE, v as setRef, y as subscribe } from "./core-ZOLNwdry.mjs";
 //#region src/pipis/reactive.d.ts
 /**
  * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
@@ -134,4 +134,4 @@ export declare function Portal({ target, ...props }: {
  */
 export declare function Helmet(props: ChildrenProp): JSXElement;
 //#endregion
-export { ChildrenProp, Cleanup, Content, Fragment, IntrinsicElements, JSXElement, JSXParent, JSXSibling, MaybeReactive, REACTIVE, Reactive, RefProp, createElement, createMarker, emptyElement, isReactive, moveNode, setRef, subscribe, textNode };
+export { ChildrenProp, Cleanup, Content, CoreIntrinsicElements, Fragment, JSXElement, JSXParent, JSXSibling, MaybeReactive, REACTIVE, Reactive, RefProp, createElement, createMarker, emptyElement, isReactive, moveNode, setRef, subscribe, textNode };

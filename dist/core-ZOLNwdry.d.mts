@@ -87,7 +87,7 @@ type ConvertIntrinsicProps<T, TTarget extends EventTarget> = { [K in keyof T]?: 
 type AllElements = HTMLElementTagNameMap & Omit<SVGElementTagNameMap, "a"> & MathMLElementTagNameMap;
 type IntrinsicElement<T extends Node> = ConvertIntrinsicProps<StripReadonly<StripMethods<T>>, T> & ChildrenProp & RefProp<T>;
 /** The JSX props type for every built-in HTML/SVG/MathML tag, derived from the DOM lib types. */
-type IntrinsicElements = { [K in keyof AllElements]: IntrinsicElement<AllElements[K]>; };
+type CoreIntrinsicElements = { [K in keyof AllElements]: IntrinsicElement<AllElements[K]>; };
 /** Invokes a `ref` prop, whether it's a callback or a settable `{ value }` object. */
 declare function setRef<T>(props: RefProp<T>, value: T): void;
 /**
@@ -95,6 +95,6 @@ declare function setRef<T>(props: RefProp<T>, value: T): void;
  * {@link Reactive} props are subscribed on mount and unsubscribed on unmount. The underlying DOM
  * node is created once and reused across mount/unmount/remount calls.
  */
-declare function createElement<T extends keyof IntrinsicElements>(type: T, props: IntrinsicElements[T]): JSXElement;
+declare function createElement<T extends keyof CoreIntrinsicElements>(type: T, props: CoreIntrinsicElements[T]): JSXElement;
 //#endregion
-export { moveNode as _, IntrinsicElements as a, textNode as b, JSXSibling as c, Reactive as d, RefProp as f, isReactive as g, emptyElement as h, Fragment as i, MaybeReactive as l, createMarker as m, Cleanup as n, JSXElement as o, createElement as p, Content as r, JSXParent as s, ChildrenProp as t, REACTIVE as u, setRef as v, subscribe as y };
+export { moveNode as _, Fragment as a, textNode as b, JSXSibling as c, Reactive as d, RefProp as f, isReactive as g, emptyElement as h, CoreIntrinsicElements as i, MaybeReactive as l, createMarker as m, Cleanup as n, JSXElement as o, createElement as p, Content as r, JSXParent as s, ChildrenProp as t, REACTIVE as u, setRef as v, subscribe as y };

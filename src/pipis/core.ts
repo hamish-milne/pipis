@@ -184,7 +184,7 @@ type IntrinsicElement<T extends Node> = ConvertIntrinsicProps<StripReadonly<Stri
   RefProp<T>;
 
 /** The JSX props type for every built-in HTML/SVG/MathML tag, derived from the DOM lib types. */
-export type IntrinsicElements = {
+export type CoreIntrinsicElements = {
   [K in keyof AllElements]: IntrinsicElement<AllElements[K]>;
 };
 
@@ -219,9 +219,9 @@ type BindingEntry = [string, Reactive<unknown>, Cleanup | null];
  * {@link Reactive} props are subscribed on mount and unsubscribed on unmount. The underlying DOM
  * node is created once and reused across mount/unmount/remount calls.
  */
-export function createElement<T extends keyof IntrinsicElements>(
+export function createElement<T extends keyof CoreIntrinsicElements>(
   type: T,
-  props: IntrinsicElements[T],
+  props: CoreIntrinsicElements[T],
 ): JSXElement {
   const element = document.createElement(type) as AllElements[T];
   const bindings: BindingEntry[] = [];

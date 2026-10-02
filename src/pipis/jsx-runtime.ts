@@ -2,7 +2,7 @@ import {
   type JSXElement,
   type ChildrenProp,
   createElement,
-  type IntrinsicElements as CoreIntrinsicElements,
+  type CoreIntrinsicElements,
 } from "./core";
 export { Fragment } from "./core";
 
