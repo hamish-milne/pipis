@@ -1,5 +1,14 @@
 import { type Reactive, REACTIVE } from "./core";
 
+/**
+ * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
+ */
+export function adapt<T extends { subscribe: (callback: (newValue: any) => void) => () => void }>(
+  obj: T,
+): T & { [REACTIVE]: true } {
+  return Object.assign(obj, { [REACTIVE]: true as const });
+}
+
 /** A {@link Reactive} value with synchronous, always-up-to-date read access via `.value`. */
 export type ReactiveReadonly<T> = Reactive<T> & {
   get value(): T;

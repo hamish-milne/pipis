@@ -11,7 +11,6 @@ import {
   type JSXParent,
   type JSXSibling,
   type ChildrenProp,
-  normalizeChildren,
 } from "./core";
 import {
   handleError,

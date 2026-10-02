@@ -67,17 +67,6 @@ export type RefProp<T> = {
 /** A {@link JSXElement} that renders nothing; on mount, returns `sibling` unchanged. */
 export const emptyElement: JSXElement = (parent, sibling = null) => sibling;
 
-export function normalizeChildren(children: JSXChild | JSXChildArray): JSXElement[] {
-  let childElements: JSXElement[] = [];
-  for (const child of children instanceof Array ? children : [children]) {
-    if (child != null && child !== false) {
-      childElements.push(typeof child === "function" ? child : textNode(child));
-    }
-  }
-  childElements.reverse();
-  return childElements;
-}
-
 /**
  * Renders a `<>...</>` fragment: a sequence of children with no wrapping DOM node.
  * Collapses to the child itself (or {@link emptyElement}) when there are 0 or 1 children,
@@ -87,8 +76,14 @@ export function normalizeChildren(children: JSXChild | JSXChildArray): JSXElemen
  * the structure should be dynamic, consider {@link List}, {@link ReactiveChildren}, or other
  * dynamic rendering utilities.
  */
-export function Fragment(props: ChildrenProp): JSXElement {
-  const childElements = normalizeChildren(props.children);
+export function Fragment({ children }: ChildrenProp): JSXElement {
+  let childElements: JSXElement[] = [];
+  for (const child of children instanceof Array ? children : [children]) {
+    if (child != null && child !== false) {
+      childElements.push(typeof child === "function" ? child : textNode(child));
+    }
+  }
+  childElements.reverse();
   if (childElements.length <= 1) {
     return childElements[0] ?? emptyElement;
   }

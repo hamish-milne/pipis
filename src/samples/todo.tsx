@@ -127,7 +127,9 @@ export function TodoApp() {
         </form>
 
         <ul className="peer max-h-112 divide-y divide-white/5 overflow-y-auto empty:hidden">
-          <List items={todos} itemKey={(todo) => todo.id} children={(todo) => todoRow(todo.id)} />
+          <List items={todos} itemKey={(todo) => todo.id}>
+            {(todo) => todoRow(todo.id)}
+          </List>
         </ul>
         <p className="hidden px-6 py-12 text-center text-sm text-slate-500 peer-empty:block">
           Nothing to do — enjoy the silence.
