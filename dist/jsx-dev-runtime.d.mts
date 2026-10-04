@@ -1,4 +1,4 @@
-import { a as Fragment, o as JSXElement, t as ChildrenProp } from "./core-ZOLNwdry.mjs";
+import { a as Fragment, o as JSXElement, t as ChildrenProp } from "./core-BSwX5bom.mjs";
 import { Component, JSXKey } from "./jsx-runtime.mjs";
 //#region src/pipis/jsx-dev-runtime.d.ts
 export type SourceInfo = {

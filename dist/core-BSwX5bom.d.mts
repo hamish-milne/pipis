@@ -83,7 +83,9 @@ type EventHandlerWithTarget<TEventHandler, TTarget extends EventTarget> = TEvent
   target: TTarget;
 }) => void : TEventHandler;
 type ValueOrBinding<T> = T | Reactive<T>;
-type ConvertIntrinsicProps<T, TTarget extends EventTarget> = { [K in keyof T]?: ValueOrBinding<EventHandlerWithTarget<T[K], TTarget>>; };
+type NestedKey = "style";
+type NestedBinding<T> = { readonly [K in keyof T]?: ValueOrBinding<T[K]>; };
+type ConvertIntrinsicProps<T, TTarget extends EventTarget> = { readonly [K in keyof T]?: K extends NestedKey ? NestedBinding<T[K]> : ValueOrBinding<EventHandlerWithTarget<T[K], TTarget>>; };
 type AllElements = HTMLElementTagNameMap & Omit<SVGElementTagNameMap, "a"> & MathMLElementTagNameMap;
 type IntrinsicElement<T extends Node> = ConvertIntrinsicProps<StripReadonly<StripMethods<T>>, T> & ChildrenProp & RefProp<T>;
 /** The JSX props type for every built-in HTML/SVG/MathML tag, derived from the DOM lib types. */

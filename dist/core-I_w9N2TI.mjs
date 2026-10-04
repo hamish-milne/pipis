@@ -85,37 +85,55 @@ function setAttribute(element, key, value) {
 		else dataset[name] = value;
 	} else element[key] = value;
 }
+const NS_PREFIX = "http://www.w3.org/";
+const NAMESPACES = [
+	[NS_PREFIX + "1999/xhtml", HTMLUnknownElement],
+	[NS_PREFIX + "2000/svg", SVGElement],
+	[NS_PREFIX + "1998/Math/MathML", MathMLElement]
+];
+NAMESPACES[3] = [NAMESPACES[0][0], null];
 /**
 * Renders an intrinsic (HTML/SVG/MathML tag) element. Static props are set once at construction;
 * {@link Reactive} props are subscribed on mount and unsubscribed on unmount. The underlying DOM
 * node is created once and reused across mount/unmount/remount calls.
 */
 function createElement(type, props) {
-	const element = document.createElement(type);
+	let element;
+	for (const [ns, invalid] of NAMESPACES) {
+		element = document.createElementNS(ns, type);
+		if (Object.getPrototypeOf(element) === invalid?.prototype) break;
+	}
 	const bindings = [];
-	for (const key in props) {
-		if (key === "children" || key === "ref") continue;
-		const value = props[key];
+	const addBinding = (obj, value, key) => {
 		if (isReactive(value)) bindings.push([
+			obj,
 			key,
 			value,
 			null
 		]);
 		else setAttribute(element, key, value);
+	};
+	for (const key in props) {
+		if (key === "children" || key === "ref") continue;
+		const value = props[key];
+		if (key === "style") {
+			const obj = element[key];
+			for (const nestedKey in value) addBinding(obj, value[nestedKey], nestedKey);
+		} else addBinding(element, value, key);
 	}
 	setRef(props, element);
 	const children = Fragment(props);
 	return function jsxIntrinsic_element(parent, sibling = null) {
 		if (moveNode(element, parent, sibling)) {
 			if (parent) for (const b of bindings) {
-				const [key, reactive] = b;
-				b[2] ??= subscribe(reactive, function jsxIntrinsic_binding(newValue) {
-					setAttribute(element, key, newValue);
+				const [obj, key, reactive] = b;
+				b[3] ??= subscribe(reactive, function jsxIntrinsic_binding(newValue) {
+					setAttribute(obj, key, newValue);
 				});
 			}
 			else for (const b of bindings) {
-				b[2]?.();
-				b[2] = null;
+				b[3]?.();
+				b[3] = null;
 			}
 			children(element);
 		}

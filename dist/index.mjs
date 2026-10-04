@@ -1,4 +1,4 @@
-import { a as emptyElement, c as setRef, i as createMarker, l as subscribe, n as REACTIVE, o as isReactive, r as createElement, s as moveNode, t as Fragment, u as textNode } from "./core-BZx4Ut7Y.mjs";
+import { a as emptyElement, c as setRef, i as createMarker, l as subscribe, n as REACTIVE, o as isReactive, r as createElement, s as moveNode, t as Fragment, u as textNode } from "./core-I_w9N2TI.mjs";
 //#region src/pipis/reactive.ts
 /**
 * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
