@@ -155,6 +155,12 @@ function MarkdownExample() {
   );
 }
 
+function InlineStyleExample() {
+  const color = reactive("red");
+
+  return <div style={{ color, scale: "1" }}>This text is styled with a reactive color.</div>;
+}
+
 function classComponent<T>(clazz: { new (props: Partial<T>): { element: JSXElement } }) {
   return (props: Partial<T>): JSXElement => {
     const instance = new clazz(props);

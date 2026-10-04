@@ -15,7 +15,7 @@ Element = `(parent?: Node, sibling?: Node|null) => Node|null`
 - Children mount in REVERSE order (rightmost first) b/c sibling arg is the next/right node. So `Effect` should be FIRST child of parent element (ensures siblings attached before effect runs).
 - Construction (component body) must be idempotent, no side effects/subscriptions. Mount = side effects ok, should be reversible on unmount where practical. Don't mutate app state during mount (except Portal).
 
-This package (`pipis`) exposes one main entry point (`package.json` `exports`: `.`) plus `pipis/markdown` and `pipis/highlight` — `core.ts`/`reactive.ts`/`dynamic.ts` all come from the single `"pipis"` import, don't guess sub-paths for those.
+This package (`pipis`) exposes one main entry point plus `pipis/markdown` and `pipis/highlight` — everything below comes from the single `"pipis"` import, don't guess sub-paths.
 
 ## Reactive<T>
 
@@ -154,7 +154,7 @@ CSS `:empty` ignores empty-string text nodes and comment nodes (not strict "zero
 12. `disabled={reactiveBoolean}` is a normal binding — disabled buttons just don't fire `onclick`.
 13. Can't mix a static JSX child with a sibling `.map()` expression (array-in-array) — wrap the whole children list in one array expression instead.
 
-## Worked example: todo list (simplified from src/samples/todo.tsx)
+## Worked example: todo list
 
 Shows: array state w/ whole-value replacement, `List`+`itemKey`, per-row `select()` so a row only updates on its own data, reactive `data-*` driving CSS, `empty:hidden`.
 
@@ -220,7 +220,7 @@ function TodoApp() {
 }
 ```
 
-## Worked example: gallery (simplified from src/samples/gallery.tsx)
+## Worked example: gallery
 
 Shows: `select()` to derive the active item from an id, `Dynamic` used correctly (coarse-grained: swapping an entire unrelated subtree — a whole example app — not for routine leaf updates).
 
@@ -255,4 +255,7 @@ function Gallery() {
     </div>
   );
 }
+
+// Mount the component to the body - this goes in your 'main' module.
+Gallery()(document.body);
 ```
