@@ -1,4 +1,4 @@
-import { a as Fragment, i as CoreIntrinsicElements, o as JSXElement, t as ChildrenProp } from "./core-BSwX5bom.mjs";
+import { a as Fragment, i as CoreIntrinsicElements, o as JSXElement, t as ChildrenProp } from "./core-DMbOvbqZ.mjs";
 //#region src/pipis/jsx-runtime.d.ts
 export type Component = keyof CoreIntrinsicElements | ((props: ChildrenProp) => JSXElement);
 export type JSXKey = string | number | null;

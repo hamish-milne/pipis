@@ -1,4 +1,4 @@
-import { _ as moveNode, a as Fragment, b as textNode, c as JSXSibling, d as Reactive, f as RefProp, g as isReactive, h as emptyElement, i as CoreIntrinsicElements, l as MaybeReactive, m as createMarker, n as Cleanup, o as JSXElement, p as createElement, r as Content, s as JSXParent, t as ChildrenProp, u as REACTIVE, v as setRef, y as subscribe } from "./core-BSwX5bom.mjs";
+import { _ as moveNode, a as Fragment, b as textNode, c as JSXSibling, d as Reactive, f as RefProp, g as isReactive, h as emptyElement, i as CoreIntrinsicElements, l as MaybeReactive, m as createMarker, n as Cleanup, o as JSXElement, p as createElement, r as Content, s as JSXParent, t as ChildrenProp, u as REACTIVE, v as setRef, y as subscribe } from "./core-DMbOvbqZ.mjs";
 //#region src/pipis/reactive.d.ts
 /**
  * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
@@ -19,6 +19,8 @@ export type ReactiveState<T> = ReactiveReadonly<T> & {
 /** Creates a simple, independently-writable {@link ReactiveState} value. */
 export declare function reactive<T>(initialValue: T): ReactiveState<T>;
 export declare function reactive<T>(initialValue?: T): ReactiveState<T | undefined>;
+export type DeepPartial<T> = T extends object ? T extends (infer _)[] ? T : { [P in keyof T]?: DeepPartial<T[P]>; } : T;
+export declare function patch<T>(state: ReactiveState<T>, partial: DeepPartial<T>): void;
 /** Derives a read-only reactive value from `input` by applying `compute`, only notifying subscribers when the result actually changes. */
 export declare function select<TIn, TOut>(input: Reactive<TIn>, compute: (input: TIn) => TOut): Reactive<TOut>;
 /** Derives a read-only reactive value by selecting a single property key out of `input`. */
@@ -94,16 +96,16 @@ export declare function Watch<T>({ value, children }: {
   children: (newValue: T) => void;
 }): JSXElement;
 /**
- * Renders `children` (or `success`, if omitted) while `promise` is pending, `success` once it
- * resolves, and `error` if it rejects. Does not offer timeout/retry/streaming; for that level of
- * control, consider a dedicated data-fetching library layered on top.
+ * Renders `loading` while `promise` is pending, `children(data)` once it
+ * resolves, and `error(error)` if it rejects.
  */
-export declare function Suspense<T>({ promise, placeholder, success, error, ...props }: {
+export declare function Suspense<T>({ promise, emptyData, loading, error, children }: {
   promise: (() => Promise<T>) | Reactive<Promise<T>>;
-  placeholder: T;
-  success: (value: ReactiveReadonly<T>) => JSXElement;
+  emptyData: T;
+  loading?: JSXElement;
   error?: (err: ReactiveReadonly<unknown>) => JSXElement;
-} & ChildrenProp): JSXElement;
+  children: (value: ReactiveReadonly<T>) => JSXElement;
+}): JSXElement;
 /**
  * Catches errors thrown synchronously while mounting `children` and renders `fallback` instead.
  * Only covers the mount call itself - errors thrown later, e.g. from a reactive binding's

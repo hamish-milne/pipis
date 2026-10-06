@@ -20,7 +20,7 @@ const emptyElement = (parent, sibling = null) => sibling;
 */
 function Fragment({ children }) {
 	let childElements = [];
-	for (const child of children instanceof Array ? children : [children]) if (child != null && child !== false) childElements.push(typeof child === "function" ? child : textNode(child));
+	for (const child of (children instanceof Array ? children : [children]).flat(7)) if (child != null && child !== false) childElements.push(typeof child === "function" ? child : textNode(child));
 	childElements.reverse();
 	if (childElements.length <= 1) return childElements[0] ?? emptyElement;
 	return function Fragment_element(parent, sibling = null) {
@@ -83,7 +83,8 @@ function setAttribute(element, key, value) {
 		const name = key.slice(5);
 		if (value == null || value === false) delete dataset[name];
 		else dataset[name] = value;
-	} else element[key] = value;
+	} else if (element instanceof SVGElement) element.setAttribute(key, value);
+	else element[key] = value;
 }
 const NS_PREFIX = "http://www.w3.org/";
 const NAMESPACES = [

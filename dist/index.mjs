@@ -1,4 +1,4 @@
-import { a as emptyElement, c as setRef, i as createMarker, l as subscribe, n as REACTIVE, o as isReactive, r as createElement, s as moveNode, t as Fragment, u as textNode } from "./core-I_w9N2TI.mjs";
+import { a as emptyElement, c as setRef, i as createMarker, l as subscribe, n as REACTIVE, o as isReactive, r as createElement, s as moveNode, t as Fragment, u as textNode } from "./core-CY_EkVze.mjs";
 //#region src/pipis/reactive.ts
 /**
 * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
@@ -32,6 +32,20 @@ var ReactiveStateImpl = class {
 };
 function reactive(initialValue) {
 	return new ReactiveStateImpl(initialValue);
+}
+function isMergeable(value) {
+	return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+function mergeDeep(target, source) {
+	if (isMergeable(source) && isMergeable(target)) {
+		const result = { ...target };
+		for (const key in source) if (Object.prototype.hasOwnProperty.call(source, key)) result[key] = mergeDeep(target[key], source[key]);
+		return result;
+	}
+	return source;
+}
+function patch(state, partial) {
+	state.value = mergeDeep(state.value, partial);
 }
 const UNDEFINED = Symbol();
 var ReactiveSelect = class {
@@ -223,15 +237,14 @@ function Watch({ value, children }) {
 	return effect(Watch_effect);
 }
 /**
-* Renders `children` (or `success`, if omitted) while `promise` is pending, `success` once it
-* resolves, and `error` if it rejects. Does not offer timeout/retry/streaming; for that level of
-* control, consider a dedicated data-fetching library layered on top.
+* Renders `loading` while `promise` is pending, `children(data)` once it
+* resolves, and `error(error)` if it rejects.
 */
-function Suspense({ promise, placeholder, success, error, ...props }) {
+function Suspense({ promise, emptyData, loading, error, children }) {
 	const state = reactive(0);
-	const successValue = reactive(placeholder);
+	const successValue = reactive(emptyData);
 	const errorValue = reactive();
-	const successElement = success(successValue);
+	const successElement = children(successValue);
 	function Suspense_promise(newPromise) {
 		state.value = 0;
 		newPromise.then((value) => {
@@ -250,7 +263,7 @@ function Suspense({ promise, placeholder, success, error, ...props }) {
 	}), OneOf({
 		selector: state,
 		children: [
-			props.children ? Fragment(props) : successElement,
+			loading ?? successElement,
 			successElement,
 			error?.(errorValue) ?? successElement
 		]
@@ -319,4 +332,4 @@ function Helmet(props) {
 	};
 }
 //#endregion
-export { Dynamic, Effect, ErrorBoundary, Fragment, Helmet, If, List, OneOf, Portal, PortalTarget, REACTIVE, Suspense, Watch, adapt, constant, createElement, createMarker, defineContext, dynamic, effect, emptyElement, getErrorHandler, handleError, isReactive, moveNode, reactive, select, setRef, subscribe, subscribeWithCatch, textNode, withErrorHandler };
+export { Dynamic, Effect, ErrorBoundary, Fragment, Helmet, If, List, OneOf, Portal, PortalTarget, REACTIVE, Suspense, Watch, adapt, constant, createElement, createMarker, defineContext, dynamic, effect, emptyElement, getErrorHandler, handleError, isReactive, moveNode, patch, reactive, select, setRef, subscribe, subscribeWithCatch, textNode, withErrorHandler };
