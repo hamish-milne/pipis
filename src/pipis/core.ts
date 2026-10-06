@@ -1,5 +1,7 @@
 /// <reference lib="dom" />
 
+import type { SVGElementAttributeMap } from "./svg";
+
 /** Brand symbol used to identify {@link Reactive} values at runtime; see {@link isReactive}. */
 export const REACTIVE = Symbol();
 
@@ -51,7 +53,7 @@ export type JSXElement = (parent?: JSXParent, sibling?: JSXSibling) => Node | nu
 /** A child that renders as a DOM text node: any other primitive value is stringified, `null`/`undefined` render as empty. */
 export type Content = string | number | false | null | undefined;
 type JSXChild = JSXElement | Content | Reactive<Content>;
-type JSXChildArray = readonly JSXChild[];
+type JSXChildArray = readonly (JSXChild | JSXChildArray)[];
 
 /** Props shape accepted by any element that can take JSX children. */
 export type ChildrenProp = {
@@ -78,7 +80,7 @@ export const emptyElement: JSXElement = (parent, sibling = null) => sibling;
  */
 export function Fragment({ children }: ChildrenProp): JSXElement {
   let childElements: JSXElement[] = [];
-  for (const child of children instanceof Array ? children : [children]) {
+  for (const child of (children instanceof Array ? children : [children]).flat(7) as JSXChild[]) {
     if (child != null && child !== false) {
       childElements.push(typeof child === "function" ? child : textNode(child));
     }
@@ -162,6 +164,18 @@ type StripMethods<T> = {
   [K in keyof T as T[K] extends Function ? never : K]: T[K];
 };
 
+type SVGValuesToBase<T> = {
+  -readonly [K in keyof T as T[K] extends { readonly baseVal: infer U } ? K : never]: string;
+};
+
+type SVGPresentationAttributes = {
+  stroke: string;
+  strokeWidth: string;
+  fill: string;
+  opacity: string;
+  display: string;
+};
+
 type EventHandlerWithTarget<TEventHandler, TTarget extends EventTarget> = TEventHandler extends (
   this: infer TThis,
   ev: infer TEvent,
@@ -188,13 +202,17 @@ type AllElements = HTMLElementTagNameMap &
   Omit<SVGElementTagNameMap, "a"> &
   MathMLElementTagNameMap;
 
-type IntrinsicElement<T extends Node> = ConvertIntrinsicProps<StripReadonly<StripMethods<T>>, T> &
+type IntrinsicElement<T extends Node, Tag extends string> = ConvertIntrinsicProps<
+  StripReadonly<StripMethods<T>>,
+  T
+> &
   ChildrenProp &
-  RefProp<T>;
+  RefProp<T> &
+  (Tag extends keyof SVGElementAttributeMap ? SVGElementAttributeMap[Tag] : {});
 
 /** The JSX props type for every built-in HTML/SVG/MathML tag, derived from the DOM lib types. */
 export type CoreIntrinsicElements = {
-  [K in keyof AllElements]: IntrinsicElement<AllElements[K]>;
+  [K in keyof AllElements]: IntrinsicElement<AllElements[K], K>;
 };
 
 /** Invokes a `ref` prop, whether it's a callback or a settable `{ value }` object. */
@@ -217,6 +235,8 @@ function setAttribute(element: unknown, key: string, value: any) {
     } else {
       dataset[name] = value;
     }
+  } else if (element instanceof SVGElement) {
+    element.setAttribute(key, value);
   } else {
     (element as any)[key] = value;
   }

@@ -61,6 +61,38 @@ export function reactive<T>(initialValue: T): ReactiveState<T> {
   return new ReactiveStateImpl(initialValue);
 }
 
+export type DeepPartial<T> = T extends object
+  ? T extends (infer _)[]
+    ? T
+    : {
+        [P in keyof T]?: DeepPartial<T[P]>;
+      }
+  : T;
+
+function isMergeable(value: unknown): value is object {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergeDeep<T>(target: T, source: DeepPartial<T>): T {
+  if (isMergeable(source) && isMergeable(target)) {
+    const result: T = { ...target };
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        result[key as keyof T] = mergeDeep(
+          target[key as keyof T],
+          source[key as keyof typeof source] as DeepPartial<T[keyof T]>,
+        );
+      }
+    }
+    return result;
+  }
+  return source as T;
+}
+
+export function patch<T>(state: ReactiveState<T>, partial: DeepPartial<T>): void {
+  state.value = mergeDeep(state.value, partial);
+}
+
 const UNDEFINED = Symbol();
 
 class ReactiveSelect<TIn, TOut> implements Reactive<TOut> {

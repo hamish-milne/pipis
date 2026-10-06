@@ -106,11 +106,11 @@ function SuspenseExample() {
   return (
     <Suspense
       promise={() => new Promise<string>((resolve) => setTimeout(() => resolve("Some data"), 2000))}
-      placeholder=""
-      success={(data) => <p>Content loaded successfully: {data}</p>}
+      emptyData=""
+      loading={<p>Loading...</p>}
       error={(err) => <p>Error: {select(err, (e) => (e as Error)?.message ?? "Unknown error")}</p>}
     >
-      <p>Loading...</p>
+      {(data) => <p>Content loaded successfully: {data}</p>}
     </Suspense>
   );
 }
@@ -159,6 +159,23 @@ function InlineStyleExample() {
   const color = reactive("red");
 
   return <div style={{ color, scale: "1" }}>This text is styled with a reactive color.</div>;
+}
+
+function NestedChildArrayExample() {
+  return (
+    <div>
+      {[1, 2, 3].map((item) => [<div>{item}</div>, <div>{item}</div>])}
+      <span>Test</span>
+    </div>
+  );
+}
+
+function SVGExample() {
+  return (
+    <svg width="100" height="100">
+      <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+    </svg>
+  );
 }
 
 function classComponent<T>(clazz: { new (props: Partial<T>): { element: JSXElement } }) {
