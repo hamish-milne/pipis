@@ -206,26 +206,26 @@ export function Watch<T>({
 }
 
 /**
- * Renders `children` (or `success`, if omitted) while `promise` is pending, `success` once it
- * resolves, and `error` if it rejects. Does not offer timeout/retry/streaming; for that level of
- * control, consider a dedicated data-fetching library layered on top.
+ * Renders `loading` while `promise` is pending, `children(data)` once it
+ * resolves, and `error(error)` if it rejects.
  */
 export function Suspense<T>({
   promise,
-  placeholder,
-  success,
+  emptyData,
+  loading,
   error,
-  ...props
+  children,
 }: {
   promise: (() => Promise<T>) | Reactive<Promise<T>>;
-  placeholder: T;
-  success: (value: ReactiveReadonly<T>) => JSXElement;
+  emptyData: T;
+  loading?: JSXElement;
   error?: (err: ReactiveReadonly<unknown>) => JSXElement;
-} & ChildrenProp): JSXElement {
+  children: (value: ReactiveReadonly<T>) => JSXElement;
+}): JSXElement {
   const state = reactive<0 | 1 | 2>(0);
-  const successValue = reactive<T>(placeholder);
+  const successValue = reactive<T>(emptyData);
   const errorValue = reactive<unknown>();
-  const successElement = success(successValue);
+  const successElement = children(successValue);
 
   function Suspense_promise(newPromise: Promise<T>) {
     state.value = 0;
@@ -254,7 +254,7 @@ export function Suspense<T>({
       OneOf({
         selector: state,
         children: [
-          props.children ? Fragment(props) : successElement,
+          loading ?? successElement,
           successElement,
           error?.(errorValue) ?? successElement,
         ],
