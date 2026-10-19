@@ -1,9 +1,9 @@
-import { type Reactive, REACTIVE } from './core';
+import { type Reactive, REACTIVE } from './core.ts';
 
 /**
  * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
  */
-export function adapt<T extends { subscribe: (callback: (newValue: any) => void) => () => void }>(obj: T): T & { [REACTIVE]: true } {
+export function adapt<T extends { subscribe: (callback: (newValue: unknown) => void) => () => void }>(obj: T): T & { [REACTIVE]: true } {
   return Object.assign(obj, { [REACTIVE]: true as const });
 }
 
@@ -150,28 +150,36 @@ export const constant = <T>(value: T): ReactiveReadonly<T> => new ReactiveConsta
  */
 
 export function defineContext<T>(defaultValue: T) {
-  const stack = [defaultValue];
+  let current = defaultValue;
   function context_provider<U>(value: T, inner: () => U): U {
-    stack.push(value);
+    const outer = current;
+    current = value;
     try {
       return inner();
     } finally {
-      stack.pop();
+      current = outer;
     }
   }
-  const context_consumer = () => stack[stack.length - 1];
+  const context_consumer = () => current;
   return [context_provider, context_consumer] as const;
 }
 export type ErrorHandler = (error: unknown) => void;
 
 export const [withErrorHandler, getErrorHandler] = defineContext<ErrorHandler>(console.error);
-type AnyFunction = (...args: any[]) => any;
-type AddReturnType<F extends AnyFunction, R> = (...args: Parameters<F>) => ReturnType<F> | R;
 
-export function handleError<T extends AnyFunction>(fn: T, err?: undefined): AddReturnType<T, undefined>;
-export function handleError<T extends AnyFunction, TErr>(fn: T, err: TErr): AddReturnType<T, TErr>;
+export function handleError<TArgs extends unknown[], TResult>(
+  fn: (...args: TArgs) => TResult,
+  err?: undefined,
+): (...args: TArgs) => TResult | undefined;
+export function handleError<TArgs extends unknown[], TResult, TErr>(
+  fn: (...args: TArgs) => TResult,
+  err: TErr,
+): (...args: TArgs) => TResult | TErr;
 
-export function handleError<T extends AnyFunction, TErr>(fn: T, err: TErr): AddReturnType<T, TErr> {
+export function handleError<TArgs extends unknown[], TResult, TErr>(
+  fn: (...args: TArgs) => TResult,
+  err: TErr,
+): (...args: TArgs) => TResult | TErr {
   return function handleError_wrapper(...args) {
     try {
       return fn(...args);

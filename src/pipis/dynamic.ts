@@ -11,8 +11,8 @@ import {
   type JSXParent,
   type JSXSibling,
   type ChildrenProp,
-} from './core';
-import { handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive';
+} from './core.ts';
+import { handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive.ts';
 
 type MountFn = (parent: Exclude<JSXParent, undefined>, sibling: JSXSibling) => Cleanup | void;
 /**
@@ -66,7 +66,8 @@ export function List<T>({
   const renderedItems = new Map<PropertyKey, JSXElement>();
   const List_mount: MountFn = (parent, sibling) =>
     subscribeWithCatch(items, function List_items(newItems) {
-      const newKeys = newItems.map(itemKey);
+      const entries = newItems.map((item, index) => ({ item, index, key: itemKey(item, index) }));
+      const newKeys = entries.map((entry) => entry.key);
       for (const [key, item] of renderedItems) {
         if (newKeys.indexOf(key) === -1) {
           item?.();
@@ -74,13 +75,13 @@ export function List<T>({
         }
       }
       let head = sibling;
-      for (let index = newItems.length - 1; index >= 0; index--) {
-        const item = newItems[index];
-        const k = newKeys[index];
-        let itemElement = renderedItems.get(k);
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+        if (!entry) continue;
+        let itemElement = renderedItems.get(entry.key);
         if (!itemElement) {
-          itemElement = children(item, index);
-          renderedItems.set(k, itemElement);
+          itemElement = children(entry.item, entry.index);
+          renderedItems.set(entry.key, itemElement);
         }
         head = itemElement(parent, head);
       }

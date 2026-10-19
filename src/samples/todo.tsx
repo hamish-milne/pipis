@@ -1,9 +1,8 @@
-/// <reference types="vite/client" />
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
 import './styles.css';
-import { reactive, select, List } from '../pipis';
+import { reactive, select, List } from '../pipis/index.ts';
 
 type Todo = { id: number; text: string; done: boolean };
 
@@ -34,7 +33,11 @@ export function TodoApp() {
     const to = from + delta;
     if (from === -1 || to < 0 || to >= list.length) return;
     const next = list.slice();
-    [next[from], next[to]] = [next[to], next[from]];
+    const moved = next[from];
+    const displaced = next[to];
+    if (!moved || !displaced) return;
+    next[from] = displaced;
+    next[to] = moved;
     todos.value = next;
   }
 
@@ -44,7 +47,11 @@ export function TodoApp() {
 
   // Each row derives its own reactive fields by id, so it only updates when its own data changes.
   function todoRow(id: number) {
-    const todo = select(todos, (list) => list.find((t) => t.id === id)!);
+    const initial = todos.value.find((t) => t.id === id);
+    if (!initial) throw new Error(`No todo with id ${id}`);
+    // A removed row can see one more update before it unmounts, so it keeps its last todo rather than reading undefined.
+    let last = initial;
+    const todo = select(todos, (list) => (last = list.find((t) => t.id === id) ?? last));
     const text = select(todo, 'text');
     const done = select(todo, 'done');
 

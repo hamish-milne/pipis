@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
@@ -17,7 +16,7 @@ import {
   type JSXElement,
   Effect,
   Helmet,
-} from '../pipis';
+} from '../pipis/index.ts';
 
 const [withAccent, getAccent] = defineContext('text-green-400');
 

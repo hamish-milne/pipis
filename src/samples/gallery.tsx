@@ -1,12 +1,11 @@
-/// <reference types="vite/client" />
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
 import './styles.css';
-import { reactive, select, Dynamic, type JSXElement } from '../pipis';
-import { TodoApp } from './todo';
-import { WeatherApp } from './weather';
-import { FeedbackApp } from './feedback';
+import { reactive, select, Dynamic, type JSXElement } from '../pipis/index.ts';
+import { TodoApp } from './todo.tsx';
+import { WeatherApp } from './weather.tsx';
+import { FeedbackApp } from './feedback.tsx';
 
 /** An `<a>` pointing at an API's (not yet written) docs entry, used inline within descriptions. */
 function api(name: string): JSXElement {
@@ -24,7 +23,7 @@ type Example = {
   description: JSXElement;
 };
 
-const examples: Example[] = [
+const examples: [Example, ...Example[]] = [
   {
     id: 'todo',
     label: 'Todo',
@@ -65,7 +64,7 @@ const examples: Example[] = [
 
 export function Gallery() {
   const selected = reactive(examples[0].id);
-  const current = select(selected, (id) => examples.find((example) => example.id === id)!);
+  const current = select(selected, (id) => examples.find((example) => example.id === id) ?? examples[0]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

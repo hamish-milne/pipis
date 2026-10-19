@@ -1,11 +1,10 @@
-/// <reference types="vite/client" />
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
 import '../samples/styles.css';
-import { reactive, select, Effect, Watch, type JSXElement, type Reactive } from '../pipis';
-import { Markdown, renderToken, renderTokens, type MarkdownRenderer } from '../pipis/markdown';
-import { HighlightJS } from '../pipis/highlight';
+import { reactive, select, Effect, Watch, type JSXElement, type Reactive } from '../pipis/index.ts';
+import { Markdown, renderToken, renderTokens, type MarkdownRenderer } from '../pipis/markdown.tsx';
+import { HighlightJS } from '../pipis/highlight.tsx';
 
 import introduction from './01-introduction.md?raw';
 import gettingStarted from './02-getting-started.md?raw';
@@ -70,7 +69,7 @@ export function Docs() {
   const tocStack: TocNode[] = [];
   function addTocEntry(depth: number, slug: string, label: string) {
     const node: TocNode = { slug, label, depth, children: [] };
-    while (tocStack.length > 0 && tocStack[tocStack.length - 1].depth >= depth) {
+    while (tocStack.length > 0 && (tocStack[tocStack.length - 1]?.depth ?? 0) >= depth) {
       tocStack.pop();
     }
     const parent = tocStack[tocStack.length - 1];
@@ -98,7 +97,8 @@ export function Docs() {
     }
     let best: { slug: string; index: number } | undefined;
     for (const el of intersecting) {
-      const info = blockInfo.get(el)!;
+      const info = blockInfo.get(el);
+      if (!info) continue;
       if (!best || info.index < best.index) {
         best = info;
       }

@@ -1,44 +1,46 @@
 {
   "name": "pipis",
   "version": "0.1.0",
-  "description": "",
-  "keywords": [],
-  "license": "ISC",
-  "author": "",
+  "description": "A tiny JSX framework with no virtual DOM and no re-rendering: components run once and reactive values bind straight to DOM nodes.",
+  "license": "MIT",
+  "author": "Neofox Solutions LLP and Hamish Milne",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neofox-solutions/pipis.git"
+  },
+  "homepage": "https://github.com/neofox-solutions/pipis#readme",
+  "bugs": {
+    "url": "https://github.com/neofox-solutions/pipis/issues"
+  },
+  "keywords": [
+    "jsx",
+    "reactive",
+    "ui",
+    "dom",
+    "no-virtual-dom",
+    "tiny"
+  ],
+  "private": true,
   "type": "module",
-  "main": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "imports": {
-    "#jsx-runtime": "./dist/jsx-runtime.mjs",
-    "#jsx-dev-runtime": "./dist/jsx-dev-runtime.mjs"
+  "packageManager": "pnpm@12.11.2",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
   },
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.mjs"
-    },
-    "./jsx-runtime": {
-      "types": "./dist/jsx-runtime.d.ts",
-      "default": "./dist/jsx-runtime.mjs"
-    },
-    "./jsx-dev-runtime": {
-      "types": "./dist/jsx-dev-runtime.d.ts",
-      "default": "./dist/jsx-dev-runtime.mjs"
-    }
-  },
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    ".": "./src/pipis/index.ts",
+    "./jsx-runtime": "./src/pipis/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/pipis/jsx-dev-runtime.ts"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "@types/node": "^26.6.2",
-    "highlight.js": "^11.12.0",
-    "marked": "^18.0.13",
-    "oxfmt": "^0.68.0",
-    "rolldown": "1.2.8",
-    "tsdown": "^0.23.0",
-    "typescript": "^7.0.2",
-    "vite": "^8.3.0"
-  },
-  "packageManager": "pnpm@10.29.2"
+    "@tailwindcss/vite": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "highlight.js": "catalog:",
+    "marked": "catalog:",
+    "oxfmt": "catalog:",
+    "rolldown": "catalog:",
+    "typescript": "catalog:",
+    "vite-plus": "catalog:"
+  }
 }

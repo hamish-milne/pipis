@@ -3,8 +3,18 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "lib": ["es2015"],
-    "verbatimModuleSyntax": true
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src", "tools", "*.ts"]
 }

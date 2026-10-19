@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ./ */
 import { Lexer, type MarkedToken, type Token, type Tokens } from 'marked';
-import { createElement, emptyElement, Fragment, textNode, type JSXElement } from './core';
+import { createElement, emptyElement, Fragment, textNode, type JSXElement } from './core.ts';
 
 export type MarkdownRenderer = (token: MarkedToken) => JSXElement;
 

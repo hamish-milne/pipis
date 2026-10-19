@@ -1,5 +1,5 @@
-import { type JSXElement, type ChildrenProp, createElement, type CoreIntrinsicElements } from './core';
-export { Fragment } from './core';
+import { type JSXElement, type ChildrenProp, createElement, type CoreIntrinsicElements } from './core.ts';
+export { Fragment } from './core.ts';
 
 export type Component = keyof CoreIntrinsicElements | ((props: ChildrenProp) => JSXElement);
 

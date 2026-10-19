@@ -1,14 +1,13 @@
-/// <reference types="vite/client" />
 /** @jsxRuntime automatic */
 /** @jsxImportSource ./pipis */
 
 import './samples/styles.css';
-import { select, reactive } from './pipis/reactive';
-import { ErrorBoundary, List, Portal, PortalTarget, Suspense, type PortalTargetValue } from './pipis/dynamic';
-import type { JSXElement } from './pipis/core';
-import { Markdown, renderToken } from './pipis/markdown';
+import { select, reactive } from './pipis/reactive.ts';
+import { ErrorBoundary, List, Portal, PortalTarget, Suspense, type PortalTargetValue } from './pipis/dynamic.ts';
+import type { JSXElement } from './pipis/core.ts';
+import { Markdown, renderToken } from './pipis/markdown.tsx';
 import readme from '../README.md?raw';
-import { HighlightJS } from './pipis/highlight';
+import { HighlightJS } from './pipis/highlight.tsx';
 
 export function Counter() {
   const count = reactive(0);
@@ -118,7 +117,7 @@ function ListExample() {
   return (
     <ul>
       <List items={items} itemKey={(item) => item}>
-        {(item, index) => <li>{item}</li>}
+        {(item) => <li>{item}</li>}
       </List>
     </ul>
   );
@@ -199,6 +198,10 @@ export function Main() {
       <SuspenseExample />
       <ListExample />
       <MarkdownExample />
+      <InlineStyleExample />
+      <NestedChildArrayExample />
+      <SVGExample />
+      <ClassTest />
     </>
   );
 }

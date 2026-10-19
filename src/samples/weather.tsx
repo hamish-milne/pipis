@@ -1,9 +1,8 @@
-/// <reference types="vite/client" />
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
 import './styles.css';
-import { reactive, select, Suspense, Watch, type ReactiveReadonly } from '../pipis';
+import { reactive, select, Suspense, Watch, type ReactiveReadonly } from '../pipis/index.ts';
 
 type WeatherData = {
   temperature: number;
@@ -137,8 +136,13 @@ export function WeatherApp() {
         </div>
 
         <div className="px-6 pb-6 pt-4">
-          <Suspense promise={fetchWeather} placeholder={{ code: 0, temperature: 0, windSpeed: 0 }} success={weatherCard} error={errorCard}>
-            <LoadingCard />
+          <Suspense
+            promise={fetchWeather}
+            emptyData={{ code: 0, temperature: 0, windSpeed: 0 }}
+            loading={<LoadingCard />}
+            error={errorCard}
+          >
+            {weatherCard}
           </Suspense>
         </div>
       </div>

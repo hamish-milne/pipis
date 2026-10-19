@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 
-import type { SVGElementAttributeMap } from './svg';
+import type { SVGElementAttributeMap } from './svg.ts';
 
 /** Brand symbol used to identify {@link Reactive} values at runtime; see {@link isReactive}. */
 export const REACTIVE = Symbol();
@@ -79,7 +79,7 @@ export const emptyElement: JSXElement = (parent, sibling = null) => sibling;
  */
 export function Fragment({ children }: ChildrenProp): JSXElement {
   let childElements: JSXElement[] = [];
-  for (const child of (children instanceof Array ? children : [children]).flat(7) as JSXChild[]) {
+  for (const child of (Array.isArray(children) ? children : [children]).flat(7) as JSXChild[]) {
     if (child != null && child !== false) {
       childElements.push(typeof child === 'function' ? child : textNode(child));
     }
@@ -162,19 +162,10 @@ type StripMethods<T> = {
   [K in keyof T as T[K] extends Function ? never : K]: T[K];
 };
 
-type SVGValuesToBase<T> = {
-  -readonly [K in keyof T as T[K] extends { readonly baseVal: infer U } ? K : never]: string;
-};
-
-type SVGPresentationAttributes = {
-  stroke: string;
-  strokeWidth: string;
-  fill: string;
-  opacity: string;
-  display: string;
-};
-
-type EventHandlerWithTarget<TEventHandler, TTarget extends EventTarget> = TEventHandler extends (this: infer TThis, ev: infer TEvent) => any
+type EventHandlerWithTarget<TEventHandler, TTarget extends EventTarget> = TEventHandler extends (
+  this: infer TThis,
+  ev: infer TEvent,
+) => unknown
   ? (this: TThis, ev: TEvent & { target: TTarget }) => void
   : TEventHandler;
 
@@ -213,7 +204,14 @@ export function setRef<T>(props: RefProp<T>, value: T) {
   }
 }
 
-function setAttribute(element: unknown, key: string, value: any) {
+/** What a prop can hold once it is not reactive: anything the DOM coerces to a string, or a value it takes as it is. */
+type PropValue = string | number | boolean | null | undefined;
+
+// The props are read by name, and their type is the union of every element's props, so there is nothing narrower to say here.
+// oxlint-disable-next-line typescript/no-explicit-any
+type PropBag = Record<string, any>;
+
+function setAttribute(element: unknown, key: string, value: PropValue) {
   if (key.startsWith('data-')) {
     const { dataset } = element as HTMLOrSVGElement;
     const name = key.slice(5);
@@ -221,25 +219,26 @@ function setAttribute(element: unknown, key: string, value: any) {
     if (value == null || value === false) {
       delete dataset[name];
     } else {
-      dataset[name] = value;
+      dataset[name] = String(value);
     }
   } else if (element instanceof SVGElement) {
-    element.setAttribute(key, value);
+    element.setAttribute(key, String(value));
   } else {
-    (element as any)[key] = value;
+    (element as Record<string, unknown>)[key] = value;
   }
 }
 
 const NS_PREFIX = 'http://www.w3.org/';
+const HTML_NS = NS_PREFIX + '1999/xhtml';
 const NAMESPACES: [string, { prototype: object } | null][] = [
-  [NS_PREFIX + '1999/xhtml', HTMLUnknownElement],
+  [HTML_NS, HTMLUnknownElement],
   [NS_PREFIX + '2000/svg', SVGElement],
   [NS_PREFIX + '1998/Math/MathML', MathMLElement],
+  // Fall back to HTML, and always accept the result (it will be HTMLUnknownElement)
+  [HTML_NS, null],
 ];
-// Fall back to HTML, and always accept the result (it will be HTMLUnknownElement)
-NAMESPACES[3] = [NAMESPACES[0][0], null];
 
-type BindingEntry = [obj: unknown, key: string, reactive: Reactive<unknown>, cleanup: Cleanup | null];
+type BindingEntry = [obj: unknown, key: string, reactive: Reactive<PropValue>, cleanup: Cleanup | null];
 /**
  * Renders an intrinsic (HTML/SVG/MathML tag) element. Static props are set once at construction;
  * {@link Reactive} props are subscribed on mount and unsubscribed on unmount. The underlying DOM
@@ -256,7 +255,7 @@ export function createElement<T extends keyof CoreIntrinsicElements>(type: T, pr
   }
   const bindings: BindingEntry[] = [];
 
-  const addBinding = (obj: unknown, value: any, key: string) => {
+  const addBinding = (obj: unknown, value: PropValue | Reactive<PropValue>, key: string) => {
     if (isReactive(value)) {
       bindings.push([obj, key, value, null]);
     } else {
@@ -268,11 +267,12 @@ export function createElement<T extends keyof CoreIntrinsicElements>(type: T, pr
     if (key === 'children' || key === 'ref') {
       continue;
     }
-    const value = (props as any)[key];
+    const value = (props as PropBag)[key];
     if (key === 'style') {
       const obj = element[key as NestedKey];
-      for (const nestedKey in value) {
-        addBinding(obj, (value as any)[nestedKey], nestedKey);
+      const styles: PropBag = value;
+      for (const nestedKey in styles) {
+        addBinding(obj, styles[nestedKey], nestedKey);
       }
     } else {
       addBinding(element, value, key);

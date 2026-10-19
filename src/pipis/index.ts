@@ -1,3 +1,3 @@
-export * from './core';
-export * from './reactive';
-export * from './dynamic';
+export * from './core.ts';
+export * from './reactive.ts';
+export * from './dynamic.ts';
