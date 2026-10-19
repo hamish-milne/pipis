@@ -13,6 +13,8 @@ interface Reactive<T> {
 
 You can create simple reactive values using the `reactive` function provided by _pipis_. This returns an object with a `value` property that is both readable and writable, and automatically notifies subscribers when it changes.
 
+> NOTE: Notification is synchronous and unbatched: subscribers are called in the order they subscribed, before the assignment returns. So writing to a reactive from inside one of its own subscribers is an antipattern: the nested write is delivered at once, ahead of the notification still running, and a subscriber after the writer sees the newer value first and the older one last, leaving it showing a stale value._
+
 The `select` function allows you to create a derived reactive value based on an existing source value. You can either provide a function to compute the derived value, or a key to select a specific property from the input object.
 
 ```ts

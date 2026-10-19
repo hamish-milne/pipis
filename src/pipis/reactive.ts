@@ -35,8 +35,11 @@ class ReactiveStateImpl<T> implements ReactiveState<T> {
   set value(newValue: T) {
     if (this._v !== newValue) {
       this._v = newValue;
-      for (const callback of this._s) {
-        callback(newValue);
+      // A snapshot, so a subscriber added by a callback is not also called by this loop (it already had its immediate call). One that
+      // an earlier callback removed is skipped, as it would be if it were removed before the write.
+      // oxlint-disable-next-line unicorn/no-useless-spread -- the copy is the point: the set changes while this loop runs
+      for (const callback of [...this._s]) {
+        if (this._s.has(callback)) callback(newValue);
       }
     }
   }
@@ -67,8 +70,11 @@ export type DeepPartial<T> = T extends object
       }
   : T;
 
+/** Only a plain object (one made by `{}` or `Object.create(null)`) is merged key by key; an array, a Date, a Map or a class instance is a value. */
 function isMergeable(value: unknown): value is object {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
+  if (value === null || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function mergeDeep<T>(target: T, source: DeepPartial<T>): T {
@@ -103,9 +109,12 @@ class ReactiveSelect<TIn, TOut> implements Reactive<TOut> {
 
   subscribe(callback: (newValue: TOut) => void) {
     let prevValue: TOut | typeof UNDEFINED = UNDEFINED;
+    // A compute function that throws is reported, and the select simply keeps its last value, so the error cannot reach whoever wrote
+    // to the input.
+    const compute = handleError(this._c, UNDEFINED);
     const SelectBinding_subscribe = (newValue: TIn) => {
-      const newOut = this._c(newValue);
-      if (newOut !== prevValue) {
+      const newOut = compute(newValue);
+      if (newOut !== UNDEFINED && newOut !== prevValue) {
         prevValue = newOut;
         callback(prevValue);
       }
@@ -180,11 +189,14 @@ export function handleError<TArgs extends unknown[], TResult, TErr>(
   fn: (...args: TArgs) => TResult,
   err: TErr,
 ): (...args: TArgs) => TResult | TErr {
+  // The handler is the one current when the wrapper is made, not when it throws: a subscriber runs long after the code that made it
+  // (a state change, say), by which time the ErrorBoundary it was mounted under is no longer the one being provided.
+  const handler = getErrorHandler();
   return function handleError_wrapper(...args) {
     try {
       return fn(...args);
     } catch (error) {
-      getErrorHandler()(error);
+      handler(error);
       return err;
     }
   };

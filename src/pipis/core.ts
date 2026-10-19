@@ -113,8 +113,13 @@ export function moveNode(element: ChildNode, parent: JSXParent, sibling?: JSXSib
   return false;
 }
 
+/** Whether a value stands for "nothing": `null`, `undefined` and `false` render as empty text and remove a `data-*` attribute. */
+function isEmpty(value: unknown): value is null | undefined | false {
+  return value == null || value === false;
+}
+
 function setText(node: Text, content: Content) {
-  node.data = String(content ?? '');
+  node.data = isEmpty(content) ? '' : String(content);
 }
 
 /**
@@ -212,17 +217,14 @@ type PropValue = string | number | boolean | null | undefined;
 type PropBag = Record<string, any>;
 
 function setAttribute(element: unknown, key: string, value: PropValue) {
-  if (key.startsWith('data-')) {
-    const { dataset } = element as HTMLOrSVGElement;
-    const name = key.slice(5);
-    // It's not enough to set the value to null/undefined; you have to actually delete the property
-    if (value == null || value === false) {
-      delete dataset[name];
+  if (element instanceof SVGElement || (element instanceof Element && key.startsWith('data-'))) {
+    // Not `dataset`: it wants camelCase names and throws for a dashed one such as `data-multi-word`.
+    // Setting the value to null or undefined would leave the attribute there, so it has to be removed.
+    if (isEmpty(value)) {
+      element.removeAttribute(key);
     } else {
-      dataset[name] = String(value);
+      element.setAttribute(key, String(value));
     }
-  } else if (element instanceof SVGElement) {
-    element.setAttribute(key, String(value));
   } else {
     (element as Record<string, unknown>)[key] = value;
   }
@@ -230,28 +232,24 @@ function setAttribute(element: unknown, key: string, value: PropValue) {
 
 const NS_PREFIX = 'http://www.w3.org/';
 const HTML_NS = NS_PREFIX + '1999/xhtml';
-const NAMESPACES: [string, { prototype: object } | null][] = [
-  [HTML_NS, HTMLUnknownElement],
-  [NS_PREFIX + '2000/svg', SVGElement],
-  [NS_PREFIX + '1998/Math/MathML', MathMLElement],
-  // Fall back to HTML, and always accept the result (it will be HTMLUnknownElement)
-  [HTML_NS, null],
-];
+const SVG_NS = NS_PREFIX + '2000/svg';
 
 type BindingEntry = [obj: unknown, key: string, reactive: Reactive<PropValue>, cleanup: Cleanup | null];
 /**
- * Renders an intrinsic (HTML/SVG/MathML tag) element. Static props are set once at construction;
+ * Renders an intrinsic HTML or SVG element. Static props are set once at construction;
  * {@link Reactive} props are subscribed on mount and unsubscribed on unmount. The underlying DOM
  * node is created once and reused across mount/unmount/remount calls.
+ *
+ * The namespace is found by asking for an HTML element first: a tag that HTML does not know is created as SVG. So a tag that is
+ * neither (a typo that got past the types) is an `SVGElement`, not the `HTMLUnknownElement` one would expect, and a MathML tag
+ * is not given the MathML namespace, because every MathML element has the one class and nothing tells it from an unknown tag.
  */
 export function createElement<T extends keyof CoreIntrinsicElements>(type: T, props: CoreIntrinsicElements[T]): JSXElement {
-  let element!: AllElements[T];
-  for (const [ns, invalid] of NAMESPACES) {
-    element = document.createElementNS(ns, type) as AllElements[T];
-    // We have to do this instead of intanceof because SVG and MathML have no 'unknown' element type to check against
-    if (Object.getPrototypeOf(element) === invalid?.prototype) {
-      break;
-    }
+  let element = document.createElementNS(HTML_NS, type) as AllElements[T];
+  // SVG has no 'unknown element' class to ask for, but HTML does, so SVG is whatever HTML does not know. (A custom element name,
+  // such as `my-widget`, is a plain HTMLElement and stays HTML.)
+  if (element instanceof HTMLUnknownElement) {
+    element = document.createElementNS(SVG_NS, type) as AllElements[T];
   }
   const bindings: BindingEntry[] = [];
 
@@ -259,7 +257,7 @@ export function createElement<T extends keyof CoreIntrinsicElements>(type: T, pr
     if (isReactive(value)) {
       bindings.push([obj, key, value, null]);
     } else {
-      setAttribute(element, key, value);
+      setAttribute(obj, key, value);
     }
   };
 
@@ -295,7 +293,8 @@ export function createElement<T extends keyof CoreIntrinsicElements>(type: T, pr
           b[3] = null;
         }
       }
-      children(element);
+      // On unmount the children are unmounted too, which is what runs their cleanups and ends their subscriptions.
+      children(parent && element);
     }
     return parent ? element : sibling;
   };

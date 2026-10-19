@@ -1,5 +1,6 @@
 // One configuration for the toolchain (Vite+): the site build, the task runner, and Oxlint's and Oxfmt's settings.
 import { defineConfig } from 'vite-plus';
+import { playwright } from 'vite-plus/test/browser-playwright';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
@@ -18,10 +19,12 @@ export default defineConfig({
     // A fresh process per file, so a test that leaves a subscriber or a DOM node behind cannot colour the next one.
     pool: 'forks',
     isolate: true,
+    setupFiles: ['src/test/setup.ts'],
     coverage: {
       provider: 'v8',
       include: ['src/pipis/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}'],
+      // The docs site's markdown and highlighting helpers sit beside the library but are not part of it.
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/pipis/markdown.tsx', 'src/pipis/highlight.tsx'],
       reporter: ['text-summary', 'json-summary', 'json', 'html'],
       reportsDirectory: 'coverage',
       reportOnFailure: true,
@@ -29,6 +32,34 @@ export default defineConfig({
     maxWorkers: process.env.CI ? 2 : undefined,
     retry: process.env.CI ? 1 : 0,
     reporters: process.env.CI ? ['default', 'github-actions'] : ['default'],
+    // The DOM tests run twice: in jsdom, which is fast, and in Chromium, which is what the library is for. A test that only
+    // makes sense in a real browser (jsdom has no MathML, for one) checks `realBrowser` from `src/test/dom.ts` and skips itself.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'jsdom',
+          environment: 'jsdom',
+          include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.{ts,mjs}'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'chromium',
+          include: ['src/**/*.test.{ts,tsx}'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({
+              // Playwright's own download is not always available (a sandbox, for one); point this at any Chromium instead.
+              launchOptions: process.env.PIPIS_CHROMIUM ? { executablePath: process.env.PIPIS_CHROMIUM } : {},
+            }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+    ],
   },
   run: {
     // `vp run all` is everything CI runs. Tasks that write files are not cached.
@@ -37,8 +68,8 @@ export default defineConfig({
       lint: { command: 'vp lint --deny-warnings --report-unused-disable-directives' },
       fmt: { command: 'vp fmt', cache: false },
       'fmt:check': { command: 'vp fmt --check' },
-      // No tests exist yet (Phase 1 adds them); the flag goes when the first one lands.
-      test: { command: 'vp test run --coverage --passWithNoTests', cache: false },
+      // The DOM tests run in jsdom and in Chromium (see `test.projects`); coverage is recorded on every run.
+      test: { command: 'vp test run --coverage', cache: false },
       actions: { command: 'node tools/actions.ts check' },
       build: { command: 'vp build', cache: false },
       all: {

@@ -53,3 +53,4 @@ This is the version that runs the _tooling_, not anything the library needs. Dev
 2. Reproduce with the CI settings: `CI=true pnpm vp run --concurrency-limit 2 all`. CI retries a failed test once and runs two test workers.
 3. Run the failing test alone, then against the unmodified code, before blaming the change.
 4. Compare versions: CI runs Node 26 and `pnpm install --frozen-lockfile`.
+5. A test that fails only in `chromium` or only in `jsdom` is usually a real difference between the two DOMs: run it alone with `pnpm vp test run --project chromium <file>`. If Playwright's Chromium will not launch, set `PIPIS_CHROMIUM` to a Chromium you have.

@@ -12,7 +12,7 @@ import {
   type JSXSibling,
   type ChildrenProp,
 } from './core.ts';
-import { handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive.ts';
+import { getErrorHandler, handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive.ts';
 
 type MountFn = (parent: Exclude<JSXParent, undefined>, sibling: JSXSibling) => Cleanup | void;
 /**
@@ -34,7 +34,9 @@ export function dynamic(mount: MountFn, unmount: Cleanup): JSXElement {
   return function Dynamic_element(parent, sibling = null) {
     // Manually track the sibling here because the mount function adds additional nodes,
     // so the marker's DOM sibling isn't the same as the element's sibling.
-    if (moveNode(marker, parent) || sibling !== nextSibling) {
+    // The sibling is only given to moveNode when it has changed: once content is mounted the marker's own next node is that content,
+    // not the sibling, so comparing against it would move the marker, and remount everything, on every call.
+    if (moveNode(marker, parent, sibling !== nextSibling ? sibling : undefined) || sibling !== nextSibling) {
       cleanup?.();
       if (parent) {
         cleanup = mount(parent, sibling);
@@ -159,13 +161,16 @@ export function Dynamic<T>({ value, children }: { value: Reactive<T>; children: 
   });
 }
 
+// What an effect that returns no cleanup is given, so that "has run" and "has a cleanup" are the same thing for the guard below.
+const EMPTY_CLEANUP: Cleanup = () => {};
+
 /** Renders nothing, but runs `fn` on mount and its returned cleanup (if any) on unmount. */
 export function effect(fn: () => Cleanup | undefined): JSXElement {
   let cleanup: Cleanup | undefined;
-  const fnWrapped = handleError(fn);
   return function Effect_element(parent, sibling = null) {
     if (parent) {
-      cleanup ??= fnWrapped();
+      // Wrapped here, at mount, so that it reports to the ErrorBoundary it is mounted under (it was built before that existed).
+      cleanup ??= handleError(fn)() ?? EMPTY_CLEANUP;
     } else {
       cleanup?.();
       cleanup = undefined;
@@ -208,14 +213,19 @@ export function Suspense<T>({
   const errorValue = reactive<unknown>();
   const successElement = children(successValue);
 
+  // A promise that has been replaced is stale: whichever way it settles, and whenever, it must not overwrite the newer one's result.
+  let latest: Promise<T> | undefined;
   function Suspense_promise(newPromise: Promise<T>) {
+    latest = newPromise;
     state.value = 0;
     newPromise.then(
       (value) => {
+        if (latest !== newPromise) return;
         successValue.value = value;
         state.value = 1;
       },
       (err) => {
+        if (latest !== newPromise) return;
         errorValue.value = err;
         state.value = 2;
       },
@@ -241,10 +251,13 @@ export function Suspense<T>({
 }
 
 /**
- * Catches errors thrown synchronously while mounting `children` and renders `fallback` instead.
- * Only covers the mount call itself - errors thrown later, e.g. from a reactive binding's
- * subscriber callback or an {@link Effect}, are not caught. Use a global error handler (such as
- * `window.onerror`) alongside a reactive flag for those cases.
+ * Catches the errors of everything mounted under it and renders `fallback` instead: a child that throws as it mounts, and a
+ * reactive callback that throws on a later change (a `select` function, a `Watch` or `Effect` body, the functions of a `List`,
+ * `OneOf`, `If` or `Dynamic`). The nearest boundary wins, and an error thrown by the fallback itself goes to the handler outside
+ * this boundary. Not covered: an event handler, a timer, or a promise callback, which run outside any mount or subscription.
+ *
+ * It works by providing its error handler while it mounts its children, and every subscription made then remembers that handler
+ * (see {@link handleError}).
  */
 export function ErrorBoundary({
   fallback,
@@ -254,14 +267,24 @@ export function ErrorBoundary({
 } & ChildrenProp): JSXElement {
   const children = Fragment(props);
   const errorValue = reactive<unknown>();
-  const ErrorBoundary_construct = () =>
-    OneOf({
-      selector: select(errorValue, (x) => (x == null ? 0 : 1)),
-      children: [children, fallback(errorValue)],
-    });
-  return withErrorHandler(function ErrorBoundary_onError(err) {
-    errorValue.value = err;
-  }, ErrorBoundary_construct);
+  const switcher = OneOf({
+    selector: select(errorValue, (x) => (x == null ? 0 : 1)),
+    children: [children, fallback(errorValue)],
+  });
+  return function ErrorBoundary_element(parent, sibling) {
+    const outer = getErrorHandler();
+    return withErrorHandler(
+      function ErrorBoundary_onError(err) {
+        if (errorValue.value == null) {
+          errorValue.value = err;
+        } else {
+          // Already showing the fallback: this is the fallback's own error, which is for whoever is outside.
+          outer(err);
+        }
+      },
+      () => switcher(parent, sibling),
+    );
+  };
 }
 
 /** The `[parent, sibling]` mount position captured by a {@link PortalTarget}, or `undefined` if it isn't mounted. */
@@ -295,13 +318,20 @@ export function Portal({
   target: Reactive<PortalTargetValue>;
 } & ChildrenProp): JSXElement {
   const children = Fragment(props);
-  const Portal_effect = () =>
-    subscribeWithCatch(target, function Portal_target(newValue) {
+  const Portal_effect = () => {
+    const unsubscribe = subscribeWithCatch(target, function Portal_target(newValue) {
       if (newValue) {
         const [parent, sibling] = newValue;
         children(parent, sibling);
+      } else {
+        children();
       }
     });
+    return function Portal_cleanup() {
+      unsubscribe();
+      children();
+    };
+  };
   return effect(Portal_effect);
 }
 

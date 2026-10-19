@@ -220,7 +220,7 @@ cart.value = { ...cart.value, qty: 5 };
 ```
 
 ### 10. Update loops
-Never set a reactive from its own subscriber, nor (transitively) from a child's `Watch` on a value the parent derives from. That overflows the stack.
+Never set a reactive from its own subscriber, nor (transitively) from a child's `Watch` on a value the parent derives from. That overflows the stack. Even when it terminates, notification is synchronous and unbatched: the nested write is delivered at once, ahead of the notification still running, so a subscriber after the writer sees the newer value first and the older one last, and ends up showing a stale value.
 ```tsx
 // WRONG: Watch on x writes x
 <Watch value={x}>{(v) => { x.value = v + 1; }}</Watch>
@@ -494,7 +494,7 @@ subscribe(reactive, cb)                      // same as reactive.subscribe(cb)
 adapt(objWithSubscribe)                      // brands any object that has .subscribe as Reactive (zustand vanilla stores, RxJS Observables)
 defineContext<T>(defaultValue): [provider, consumer]
 withErrorHandler / getErrorHandler           // a defineContext<ErrorHandler> pair; default handler is console.error
-handleError(fn, errReturnVal?)               // wraps fn, catches a sync throw, calls getErrorHandler()(err), returns errReturnVal
+handleError(fn, errReturnVal?)               // wraps fn, catches a sync throw, calls the handler that was current WHEN handleError WAS CALLED, returns errReturnVal
 subscribeWithCatch(reactive, cb)             // reactive.subscribe(handleError(cb))
 ```
 
@@ -506,7 +506,7 @@ subscribeWithCatch(reactive, cb)             // reactive.subscribe(handleError(c
 
 ### Components and elements
 
-- A lowercase tag is an intrinsic HTML/SVG/MathML element. An uppercase tag is a component function. `<Foo x={1} />` is the same as `Foo({ x: 1 })`.
+- A lowercase tag is an intrinsic HTML or SVG element. (MathML tags are accepted by the types but are not given the MathML namespace.) A tag that is neither, which the types do not allow, is created as an `SVGElement` rather than the `HTMLUnknownElement` you might expect. An uppercase tag is a component function. `<Foo x={1} />` is the same as `Foo({ x: 1 })`.
 - `<>...</>` (`Fragment`) renders no wrapper node and collapses to its single child when it has one or zero children.
 - Intrinsic element types come from the DOM typings. On HTML elements use `className` (not `class`); on SVG elements use `class`. Use native lowercase event names. Handlers automatically narrow `event.target` to the element's type, so no casting is needed.
 - Attribute types follow the DOM typings. `style` values are strings (with units), but numeric attributes such as `min` and `max` take numbers. SVG attributes are all strings (see section 8). Any attribute value can also be a `Reactive` of its type.
@@ -585,7 +585,7 @@ type User = { name: string };
 ```ts
 ErrorBoundary({ fallback: (err: ReactiveReadonly<unknown>) => JSXElement, children }): JSXElement
 ```
-Catches only synchronous throws during mount of its DIRECT children. It does not catch errors from state updates, effects or async code; for those use `window.onerror` plus a reactive flag.
+Catches errors anywhere under it, at any depth: a child that throws as it mounts, and a callback that throws on a later change (a `select` function, a `Watch` or `Effect` body, or the functions you give to `List`, `OneOf`, `If` and `Dynamic`). The nearest boundary wins; an error thrown by the fallback goes to the boundary outside it. It does NOT catch errors in event handlers, timers or promise callbacks; for those use `window.onerror` plus a reactive flag.
 ```tsx
 <ErrorBoundary fallback={() => <p>Something broke</p>}><Risky /></ErrorBoundary>
 ```

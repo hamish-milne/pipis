@@ -10,6 +10,7 @@ You need Node 24 or later (CI uses Node 26) and pnpm. `packageManager` in `packa
 
 ```sh
 pnpm install
+pnpm exec playwright install chromium   # the DOM tests also run in Chromium; or set PIPIS_CHROMIUM to a Chromium you have
 pnpm vp run --concurrency-limit 2 all   # everything CI runs
 ```
 
@@ -18,7 +19,7 @@ The toolchain is [Vite+](https://viteplus.dev) (`vp`): tests, lint, format, the 
 | Command                         | What it does                                                                                                |
 | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `pnpm vp run all`               | Everything CI runs. Run it with `--concurrency-limit 2`: tests that run against the clock flake under load. |
-| `pnpm vp test run <file>`       | One test file. Without a path: all of them.                                                                 |
+| `pnpm vp test run <file>`       | One test file, in jsdom and Chromium. Without a path: all of them. Add `--project jsdom` for the fast loop. |
 | `pnpm vp run check`             | The type check (`tsc -p .`).                                                                                |
 | `pnpm vp lint`                  | Lint. `pnpm vp run lint` is the strict form CI uses (no warnings, no unused disable comments).              |
 | `pnpm vp fmt`                   | Format. It rewrites files, so run it _before_ a scripted find-and-replace.                                  |
@@ -41,8 +42,10 @@ When a rule does not cover a case, decide by these.
 ## The repository
 
 ```text
-src/pipis/      the library: core.ts, reactive.ts, dynamic.ts, svg.ts, and the jsx-runtime entry points
+src/pipis/      the library: core.ts, reactive.ts, dynamic.ts, svg.ts, and the jsx-runtime entry points, with a *.test.ts beside each
                 (markdown.tsx and highlight.tsx are helpers for the docs site: they use dev dependencies and are not exported)
+src/test/       helpers and setup for the tests (not part of the library)
+src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 src/docs/       the documentation pages and the site that renders them
 src/samples/    sample apps
 tools/          repository tooling (the action-pin check)
@@ -62,13 +65,31 @@ LLM.md          the reference written for AI agents
 - **Format is the formatter's** (oxfmt: width 140, single quotes). Do not hand-format against it, and do not mix reformatting into a change. A formatter run is its own commit, listed in `.git-blame-ignore-revs`.
 - **Comments explain why:** a constraint, an invariant, a decision. No narration of the next line, no commented-out code. A change that makes a comment wrong fixes it in the same commit.
 
+## Tests
+
+- **Style:** `describe` / `it` / `expect`, imported from `vite-plus/test`. One behaviour per `it`, named so that the failure report reads as a specification ("List > keeps the same row nodes when the list is reordered"). inkplot writes script-style tests with `node:assert`; pipis does not, because its tests are many small independent behaviours that need a DOM anyway.
+- **Where:** `src/pipis/<module>.test.ts` beside the module. `leaks.test.ts` holds the checks that nothing is left subscribed after unmount.
+- **Two environments.** Every test file runs twice, in jsdom (fast) and in real Chromium (what the library is for). A behaviour that only a real browser has (jsdom has no MathML) skips itself with `realBrowser` from `src/test/dom.ts`. A test that passes in one and fails in the other is a finding, not a flake: find out which DOM is right.
+- **Helpers** are in `src/test/dom.ts`: `mount(element)` (a fresh container, removed after the test, with `unmount`), `h(tag, props, ...children)` (`createElement` without the per-tag prop types), `html(node)` (markup without the comment anchors), `tracked(value)` (a reactive that counts live subscriptions) and `quiet(fn)` (swallows errors a test expects). Reset shared state in `afterEach`, never rely on test order.
+- **Assert on the real output:** the DOM that results, the values a subscriber was given, the number of subscriptions left. Not that "something rendered".
+- **Deterministic:** no network, no `Math.random()`, no wall-clock assertions. Settle a promise by hand (`deferred()` in `dynamic.test.ts`) and flush it; use fake timers for time.
+- **Type-level tests** are `src/types/*.check.tsx`, compiled by the `check` task and never run. A mistake that LLM.md calls a type error is a statement under `// @ts-expect-error <why>`; if the types start to accept it, the unused directive fails the build. Code that LLM.md recommends is compiled as written. When LLM.md changes, change the matching snippet here.
+- **Coverage** is recorded on every run (`pnpm vp run test`) and commented on pull requests. It is a signal, not a target.
+
+### Known bugs are tests that fail on purpose
+
+A bug that has not been fixed yet is a test that states the _correct_ behaviour and is marked `it.fails` (or one of the named aliases at the bottom of `src/test/dom.ts`, each of which says what is broken and why). The check stays green while the bug is known, and turns red the moment it is fixed, which is the prompt to remove the marker. So:
+
+- Fixing a bug means the test for it starts failing as a "failed expectation to fail". Change `it.fails` to `it` (for an alias, change the one line that defines it) in the same commit as the fix.
+- Before trusting a new `it.fails`, run it as a plain `it` once and read the failure: it must fail on the assertion you mean, not on a typo.
+- Do not add an `it.fails` to hide a failure you do not understand.
+
 ## Making a change
 
-- **Every behaviour change comes with a test that fails without it.** A bug fix starts with the test that reproduces the bug. Tests sit beside the module, as `src/pipis/<module>.test.ts`.
+- **Every behaviour change comes with a test that fails without it.** A bug fix starts with the test that reproduces the bug.
 - **Do not delete a test to make a change pass.** Change it when its expectation is what changed, and say so in the commit.
 - **A change to documented behaviour changes the docs in the same commit**, including `LLM.md` and the examples in it.
 - **A change to a public default, or a removed export, is breaking:** say so in the commit message.
-- **Deterministic tests:** no network, no `Math.random()`, no wall-clock assertions.
 
 ## Commits and pull requests
 

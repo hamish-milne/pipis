@@ -58,9 +58,9 @@ function App() {
 }
 ```
 
-Note that this only catches errors occurring in the mount operation, and only for `ErrorBoundary`'s _direct_ children - not children mediated by some reactive value further down the tree. To catch errors at construction time, just use a normal try/catch around the component function.
+The `ErrorBoundary` catches errors anywhere under it, at any depth: a child that throws as it mounts, and a callback that throws on a later change (a `select` function, a `Watch` or `Effect` body, or a function you give to `List`, `OneOf`, `If` or `Dynamic`). The nearest boundary wins, and an error thrown by the fallback itself goes to the boundary outside it, or to the global error handler (`console.error`) if there is none. To catch errors at construction time, just use a normal try/catch around the component function.
 
-Errors resulting from state updates or effects will not be caught by the `ErrorBoundary`. Depending on the application, these errors may or may not be recoverable. You can use the global error handler to detect if this has occurred and, if necessary, display an appropriate error message or take corrective action.
+Errors in event handlers, timers and promise callbacks are not caught by the `ErrorBoundary`, because they run outside any mount or subscription. Depending on the application, these errors may or may not be recoverable. You can use the global error handler to detect if this has occurred and, if necessary, display an appropriate error message or take corrective action.
 
 ```tsx
 function App() {

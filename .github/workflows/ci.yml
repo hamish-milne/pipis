@@ -28,6 +28,8 @@ jobs:
           node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The DOM tests also run in Chromium.
+      - run: pnpm exec playwright install --with-deps chromium
       # Type check, lint, format check, tests, action pins and the site build.
       - run: pnpm exec vp run --concurrency-limit 2 all
       # The unit tests' coverage (recorded by the `test` task), as a comment on the pull request and in the job summary.

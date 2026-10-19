@@ -9,4 +9,4 @@ export type SourceInfo = {
 };
 
 // TypeScript and Babel also pass the key, whether the children are static, the source location and `this`; pipis uses none of them.
-export const jsxDEV = (type: Component, props: ChildrenProp) => jsx(type, props);
+export const jsxDEV = (type: Component, props: ChildrenProp, ..._unused: unknown[]) => jsx(type, props);
