@@ -45,7 +45,7 @@ If the project already has a main file that mounts your component, do not mount 
 | --------------------------------------------------------------- | ------------------------------------------------------------------- |
 | show or hide something                                          | `<If condition={reactiveBoolean}>`                                  |
 | choose one view out of several                                  | `<OneOf selector={reactiveKey}>{{a: <A/>, b: <B/>}}</OneOf>`        |
-| render a list that changes                                      | `<List items={reactiveIds} itemKey={...}>` (see mistake 11)         |
+| render a list that changes                                      | `<ReactiveList items={reactiveItems} itemKey={...}>` if a row's item can change, else `<List>` (see mistake 11) |
 | swap a whole unrelated subtree (rare)                           | `<Dynamic value={reactive}>`                                        |
 | compute a value from other state                                | `select(source, fn)`                                                |
 | read one field of an object state, in JSX                       | `select(source, "field")`                                           |
@@ -61,7 +61,7 @@ If the project already has a main file that mounts your component, do not mount 
 | pass a static value where a Reactive is expected                | `constant(value)`                                                   |
 | combine several state values                                    | keep them in ONE reactive object and `select` fields off it        |
 
-**Exports** (import only these): `reactive, select, patch, constant, isReactive, subscribe, adapt, defineContext, withErrorHandler, getErrorHandler, handleError, subscribeWithCatch, If, OneOf, List, Dynamic, Effect, effect, Watch, Suspense, ErrorBoundary, Portal, PortalTarget, Helmet, Fragment, emptyElement`, plus the low-level `createElement, textNode, createMarker, moveNode, setRef, dynamic`. Types are exported too (for example `type JSXElement`). Import every name you use.
+**Exports** (import only these): `reactive, select, patch, constant, isReactive, subscribe, adapt, defineContext, withErrorHandler, getErrorHandler, handleError, subscribeWithCatch, If, OneOf, List, ReactiveList, Dynamic, Effect, effect, Watch, Suspense, ErrorBoundary, Portal, PortalTarget, Helmet, Fragment, emptyElement`, plus the low-level `createElement, textNode, createMarker, moveNode, setRef, dynamic`. Types are exported too (for example `type JSXElement`). Import every name you use.
 
 ## 4. If you know React: habits that break here
 
@@ -226,24 +226,24 @@ Never set a reactive from its own subscriber, nor (transitively) from a child's 
 <Watch value={x}>{(v) => { x.value = v + 1; }}</Watch>
 ```
 
-### 11. `List` rows: iterate over ids, derive live data per row
-`List` passes each child the plain array item (not a reactive), keyed by `itemKey`. The row function runs ONCE per key and is reused afterwards. So items must be immutable values and `itemKey` must be unique per item. When a row shows data that can change while its key stays the same, make the list source just the ids and let each row derive its own data with `select`.
+### 11. `List` rows: rows that change need `ReactiveList`
+`List` passes each row function the plain array item (not a reactive), keyed by `itemKey`. The row function runs ONCE per key and is reused afterwards, so a `List` row never sees a later change to its item. When a row shows data that can change while its key stays the same, use `ReactiveList` instead: its row function is given the item as a `Reactive`, updated whenever the item for that key changes (by `!==`), and you `select` fields from it.
 ```tsx
 // WRONG: `p` was captured once for this key, so p.quantity goes stale
 <List items={products} itemKey={(p) => p.id}>{(p) => <li>{p.quantity}</li>}</List>
-// RIGHT: list over ids; the row derives its live data by id
-const ids = select(products, (list) => list.map((p) => p.id));
-<List items={ids} itemKey={(id) => id}>
-  {(id) => {
-    const row = select(products, (list) => list.find((p) => p.id === id)!);
-    const name = select(row, "name");
-    const quantity = select(row, "quantity");
-    const lineTotal = select(row, (p) => (p.price * p.quantity).toFixed(2));
-    return <li>{name} x {quantity} = {lineTotal}</li>; // row is a Reactive: never row.name here
+// WRONG: with ReactiveList the row's item is a Reactive, not the item (type error)
+<ReactiveList items={products} itemKey={(p) => p.id}>{(p) => <li>{p.quantity}</li>}</ReactiveList>
+// RIGHT: the list is the array of items itself; each row selects what it shows
+<ReactiveList items={products} itemKey={(p) => p.id}>
+  {(product) => {
+    const name = select(product, "name");
+    const quantity = select(product, "quantity");
+    const lineTotal = select(product, (p) => (p.price * p.quantity).toFixed(2));
+    return <li>{name} x {quantity} = {lineTotal}</li>; // product is a Reactive: never product.name here
   }}
-</List>
+</ReactiveList>
 ```
-`items` must be a Reactive. For a fixed array use `constant(array)`, or plain `.map()`.
+Change an item by putting a NEW object for it in a new array (`products.value = products.value.map((p) => (p.id === id ? { ...p, quantity: 9 } : p))`): a row whose item is the same object is not touched, so only the changed row recomputes, and one change costs one pass over the array however many rows there are (1.3 ms at 10,000 rows). Use `List` for items that never change in place (add, remove, reorder only); it is a little smaller and its rows hold no reactive. `items` must be a Reactive for both. For a fixed array use `constant(array)`, or plain `.map()`. The `index` a row function is given is its index when the row was made; it does not follow later reordering.
 
 ### 12. React event names
 ```tsx
@@ -486,12 +486,12 @@ type ReactiveReadonly<T> = Reactive<T> & { get value(): T }
 type ReactiveState<T> = ReactiveReadonly<T> & { set value(v: T) }
 type MaybeReactive<T> = Reactive<T> | T
 select(input: Reactive<A>, compute: (a: A) => B): Reactive<B>
-select(input: Reactive<A>, key: keyof A): Reactive<A[key]>   // dedupes via !==. Exactly two arguments: a key OR a function, never both.
+select(input: Reactive<A>, key: keyof A): Reactive<A[key]>   // dedupes via !==. Exactly two arguments: a key OR a function, never both. Computed once PER SUBSCRIBER, not shared.
 patch<T>(state: ReactiveState<T>, partial: DeepPartial<T>): void   // update object state without spreading: deep-merges `partial` into a new object and assigns it to state.value; primitives and arrays are replaced outright
 constant<T>(value: T): ReactiveReadonly<T>   // a static value wrapped as a reactive
 isReactive(value): boolean
 subscribe(reactive, cb)                      // same as reactive.subscribe(cb)
-adapt(objWithSubscribe)                      // brands any object that has .subscribe as Reactive (zustand vanilla stores, RxJS Observables)
+adapt(source, current?)                      // a Reactive from another library's store/signal/Observable (new object, the source is untouched). subscribe(cb) must give the current value at once and return a cleanup function or a Subscription: pass the source alone (RxJS BehaviorSubject, Svelte, Nanostores, Preact Signals). Otherwise (Zustand, Redux, XState) also pass a getter: adapt(store, () => store.getState()). Valtio and Jotai: adapt({ subscribe }, current). See the cookbook
 defineContext<T>(defaultValue): [provider, consumer]
 withErrorHandler / getErrorHandler           // a defineContext<ErrorHandler> pair; default handler is console.error
 handleError(fn, errReturnVal?)               // wraps fn, catches a sync throw, calls the handler that was current WHEN handleError WAS CALLED, returns errReturnVal
@@ -540,7 +540,10 @@ OneOf<T extends PropertyKey>({ selector: Reactive<T>, children: Partial<Record<T
 ```ts
 List<T>({ items: Reactive<readonly T[]>, itemKey: (item: T, i: number) => PropertyKey, children: (item: T, i: number) => JSXElement }): JSXElement
 ```
-Keyed reorder, add and remove without recreating unaffected rows. `item` is the plain array item, not a reactive. The row function runs once per key and the row is then reused, so treat items as immutable, make `itemKey` unique per item, and iterate over ids when row data can change (mistake 11). `items` must be a Reactive.
+```ts
+ReactiveList<T>({ items: Reactive<readonly T[]>, itemKey: (item: T, i: number) => PropertyKey, children: (item: ReactiveReadonly<T>, i: number) => JSXElement }): JSXElement
+```
+Keyed reorder, add and remove without recreating unaffected rows. `item` is the plain array item, not a reactive. For rows whose item changes in place use `ReactiveList` (mistake 11). The row function runs once per key and the row is then reused, so treat items as immutable, make `itemKey` unique per item, and iterate over ids when row data can change (mistake 11). `items` must be a Reactive.
 
 ```ts
 Dynamic<T>({ value: Reactive<T>, children: (v: T) => JSXElement }): JSXElement

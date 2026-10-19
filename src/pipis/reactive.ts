@@ -1,10 +1,35 @@
-import { type Reactive, REACTIVE } from './core.ts';
+import { type Cleanup, type Reactive, REACTIVE } from './core.ts';
+
+/** What `subscribe` returns in the libraries `adapt` is for: a cleanup function (Zustand, Redux, Svelte), or a Subscription (RxJS, XState). */
+type Unsubscribable = Cleanup | { unsubscribe(): void };
 
 /**
- * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
+ * Makes a {@link Reactive} out of a store, signal or Observable from another library, without touching it.
+ *
+ * A Reactive gives its subscriber the current value as soon as it is subscribed to, and returns a function that unsubscribes. Where the
+ * library's own `subscribe` already does that (RxJS `BehaviorSubject`, Svelte and Nanostores stores, Preact signals), pass it alone: a
+ * returned Subscription object is turned into a cleanup function. Where it does not give the current value (Zustand, Redux, XState),
+ * also pass a function that reads it, such as `store.getState`: it is called to give the first value, and again on every notification,
+ * so the arguments the library passes to its listener do not matter.
  */
-export function adapt<T extends { subscribe: (callback: (newValue: unknown) => void) => () => void }>(obj: T): T & { [REACTIVE]: true } {
-  return Object.assign(obj, { [REACTIVE]: true as const });
+export function adapt<T>(source: { subscribe(callback: (value: T) => void): Unsubscribable }): Reactive<T>;
+export function adapt<T>(source: { subscribe(callback: () => void): Unsubscribable }, current: () => T): Reactive<T>;
+
+export function adapt<T>(
+  source: { subscribe(callback: (value: T) => void): Unsubscribable } | { subscribe(callback: () => void): Unsubscribable },
+  current?: () => T,
+): Reactive<T> {
+  return {
+    [REACTIVE]: true,
+    subscribe(callback) {
+      if (current) callback(current());
+      const listener = current ? () => callback(current()) : callback;
+      // The overloads guarantee that the listener is the kind this source takes (one that reads `current` for one that has a getter,
+      // the callback itself for one that gives the value), but TypeScript cannot follow that through a union of the two source types.
+      const subscription = (source as { subscribe(callback: typeof listener): Unsubscribable }).subscribe(listener);
+      return typeof subscription === 'function' ? subscription : () => subscription.unsubscribe();
+    },
+  };
 }
 
 /** A {@link Reactive} value with synchronous, always-up-to-date read access via `.value`. */

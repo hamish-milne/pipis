@@ -163,8 +163,10 @@ type StripReadonly<T> = {
 
 type Equals<A, B> = (<Y>() => Y extends B ? 1 : 2) extends <Y>() => Y extends A ? 1 : 2 ? true : false;
 
+// Also drops index signatures: `HTMLFormElement` has `[name: string]: any` (for its named controls), which would make every
+// misspelt prop on a `<form>`, such as React's `onSubmit`, type-check.
 type StripMethods<T> = {
-  [K in keyof T as T[K] extends Function ? never : K]: T[K];
+  [K in keyof T as string extends K ? never : number extends K ? never : T[K] extends Function ? never : K]: T[K];
 };
 
 type EventHandlerWithTarget<TEventHandler, TTarget extends EventTarget> = TEventHandler extends (
@@ -230,9 +232,7 @@ function setAttribute(element: unknown, key: string, value: PropValue) {
   }
 }
 
-const NS_PREFIX = 'http://www.w3.org/';
-const HTML_NS = NS_PREFIX + '1999/xhtml';
-const SVG_NS = NS_PREFIX + '2000/svg';
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 type BindingEntry = [obj: unknown, key: string, reactive: Reactive<PropValue>, cleanup: Cleanup | null];
 /**
@@ -245,7 +245,7 @@ type BindingEntry = [obj: unknown, key: string, reactive: Reactive<PropValue>, c
  * is not given the MathML namespace, because every MathML element has the one class and nothing tells it from an unknown tag.
  */
 export function createElement<T extends keyof CoreIntrinsicElements>(type: T, props: CoreIntrinsicElements[T]): JSXElement {
-  let element = document.createElementNS(HTML_NS, type) as AllElements[T];
+  let element = document.createElement(type) as AllElements[T];
   // SVG has no 'unknown element' class to ask for, but HTML does, so SVG is whatever HTML does not know. (A custom element name,
   // such as `my-widget`, is a plain HTMLElement and stays HTML.)
   if (element instanceof HTMLUnknownElement) {

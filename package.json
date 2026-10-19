@@ -33,17 +33,26 @@
     "./jsx-dev-runtime": "./src/pipis/jsx-dev-runtime.ts"
   },
   "devDependencies": {
+    "@preact/signals-core": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "highlight.js": "catalog:",
+    "jotai": "catalog:",
     "jsdom": "catalog:",
     "marked": "catalog:",
+    "nanostores": "catalog:",
     "oxfmt": "catalog:",
     "playwright": "catalog:",
+    "redux": "catalog:",
     "rolldown": "catalog:",
+    "rxjs": "catalog:",
+    "svelte": "catalog:",
     "typescript": "catalog:",
-    "vite-plus": "catalog:"
+    "valtio": "catalog:",
+    "vite-plus": "catalog:",
+    "xstate": "catalog:",
+    "zustand": "catalog:"
   }
 }

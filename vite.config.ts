@@ -71,11 +71,14 @@ export default defineConfig({
       // The DOM tests run in jsdom and in Chromium (see `test.projects`); coverage is recorded on every run.
       test: { command: 'vp test run --coverage', cache: false },
       actions: { command: 'node tools/actions.ts check' },
+      // What each feature costs an app, against the committed baseline. `size` prints the table.
+      size: { command: 'node tools/size.ts', cache: false },
+      'size:check': { command: 'node tools/size.ts --check', cache: false },
       build: { command: 'vp build', cache: false },
       all: {
         command: 'echo all green',
         cache: false,
-        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'actions', 'build'],
+        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'actions', 'size:check', 'build'],
       },
     },
   },
@@ -121,7 +124,8 @@ export default defineConfig({
       'eslint/no-underscore-dangle': 'off',
       'unicorn/consistent-function-scoping': 'off',
       'unicorn/no-array-sort': 'off',
-      // Casts are audited on their own (Phase 3); a second rule would only repeat the audit.
+      'unicorn/no-array-reverse': 'off',
+      // Casts are audited on their own; a second rule would only repeat the audit.
       'typescript/no-unsafe-type-assertion': 'off',
       'typescript/consistent-return': 'off',
       'typescript/no-unnecessary-type-parameters': 'off',

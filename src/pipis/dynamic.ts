@@ -50,11 +50,58 @@ export function dynamic(mount: MountFn, unmount: Cleanup): JSXElement {
   };
 }
 
+/** One keyed row: its element, and what to do when the item for its key arrives again in a later update. */
+type Row<T> = { element: JSXElement; update?: (item: T) => void };
+
 /**
- * Renders items from an array, keyed by `itemKey` so items can be added, removed, and reordered
- * without recreating unaffected items. Each item is (re-)mounted on every update by iterating
- * back-to-front and chaining each item's returned head node as the next item's `sibling`; combined
- * with {@link moveNode}, an item only costs a real DOM operation when it actually moved.
+ * What {@link List} and {@link ReactiveList} share: rows keyed by `itemKey`, so items can be added, removed, and reordered without
+ * recreating unaffected rows. Each row is (re-)mounted on every update by iterating back-to-front and chaining each row's returned
+ * head node as the next row's `sibling`; combined with {@link moveNode}, a row only costs a real DOM operation when it actually moved.
+ * `createRow` makes the row for a key the first time it is seen, and `update` is told about the item whenever the key is seen again.
+ */
+function keyedRows<T>(
+  items: Reactive<readonly T[]>,
+  itemKey: (item: T, index: number) => PropertyKey,
+  createRow: (item: T, index: number) => Row<T>,
+): JSXElement {
+  const rows = new Map<PropertyKey, Row<T>>();
+  const mountRows: MountFn = (parent, sibling) =>
+    subscribeWithCatch(items, function List_items(newItems) {
+      const entries = newItems.map((item, index) => ({ item, index, key: itemKey(item, index) }));
+      // A Set, not an array: looking each rendered key up in an array makes every update cost rows x rows.
+      const keys = new Set(entries.map((entry) => entry.key));
+      for (const [key, row] of rows) {
+        if (!keys.has(key)) {
+          row.element();
+          rows.delete(key);
+        }
+      }
+      let head = sibling;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        const entry = entries[i];
+        if (!entry) continue;
+        let row = rows.get(entry.key);
+        if (row) {
+          row.update?.(entry.item);
+        } else {
+          row = createRow(entry.item, entry.index);
+          rows.set(entry.key, row);
+        }
+        head = row.element(parent, head);
+      }
+    });
+  return dynamic(mountRows, function List_unmount() {
+    for (const row of rows.values()) {
+      row.element();
+    }
+    rows.clear();
+  });
+}
+
+/**
+ * Renders items from an array, one row per item, keyed by `itemKey`. A row is made once per key, from the plain item as it was then,
+ * and reused: a later update that has the same key does not change it. So it suits items that do not change while their key stays the
+ * same (add, remove and reorder are what it is for). When a row shows data that does, use {@link ReactiveList}.
  */
 export function List<T>({
   items,
@@ -65,34 +112,32 @@ export function List<T>({
   itemKey: (item: T, index: number) => PropertyKey;
   children: (item: T, index: number) => JSXElement;
 }): JSXElement {
-  const renderedItems = new Map<PropertyKey, JSXElement>();
-  const List_mount: MountFn = (parent, sibling) =>
-    subscribeWithCatch(items, function List_items(newItems) {
-      const entries = newItems.map((item, index) => ({ item, index, key: itemKey(item, index) }));
-      const newKeys = entries.map((entry) => entry.key);
-      for (const [key, item] of renderedItems) {
-        if (newKeys.indexOf(key) === -1) {
-          item?.();
-          renderedItems.delete(key);
-        }
-      }
-      let head = sibling;
-      for (let i = entries.length - 1; i >= 0; i--) {
-        const entry = entries[i];
-        if (!entry) continue;
-        let itemElement = renderedItems.get(entry.key);
-        if (!itemElement) {
-          itemElement = children(entry.item, entry.index);
-          renderedItems.set(entry.key, itemElement);
-        }
-        head = itemElement(parent, head);
-      }
-    });
-  return dynamic(List_mount, function List_unmount() {
-    for (const [, item] of renderedItems) {
-      item();
-    }
-    renderedItems.clear();
+  return keyedRows(items, itemKey, (item, index) => ({ element: children(item, index) }));
+}
+
+/**
+ * Like {@link List}, but each row is given its item as a reactive value, which is updated whenever the item for that key changes (by
+ * `!==`). A row selects from it (`select(item, 'name')`) and only the bindings that depend on what changed run. So the list can be
+ * the array of items itself, with no ids and no search: one change costs one pass over the array, however many rows there are.
+ * The `index` a row is given is its index when it was made, and does not follow later reordering.
+ */
+export function ReactiveList<T>({
+  items,
+  itemKey,
+  children,
+}: {
+  items: Reactive<readonly T[]>;
+  itemKey: (item: T, index: number) => PropertyKey;
+  children: (item: ReactiveReadonly<T>, index: number) => JSXElement;
+}): JSXElement {
+  return keyedRows(items, itemKey, (item, index) => {
+    const value = reactive(item);
+    return {
+      element: children(value, index),
+      update: (next) => {
+        value.value = next;
+      },
+    };
   });
 }
 

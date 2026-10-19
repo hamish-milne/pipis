@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
 import { REACTIVE, isReactive, subscribe } from './core.ts';
-import { adapt, constant, defineContext, handleError, patch, reactive, select, subscribeWithCatch, withErrorHandler } from './reactive.ts';
+import { constant, defineContext, handleError, patch, reactive, select, subscribeWithCatch, withErrorHandler } from './reactive.ts';
 import { quiet, tracked } from '../test/dom.ts';
 
 /** Subscribes and records every value the callback is given. */
@@ -89,8 +89,8 @@ describe('reactive', () => {
     expect(second).toEqual([0]);
   });
 
-  // Decision 4: subscribers are snapshotted before notifying. Today the set is iterated live, so a subscriber that is added
-  // during a notification is called for its own subscription and then again by the loop that is still running.
+  // ADR 6: subscribers are notified from a snapshot, so one that is added during a notification has had its call when it subscribed
+  // and is not called again by the loop that is still running.
   it('calls a subscriber that was added during a notification once, not twice', () => {
     const x = reactive(false);
     let calls = 0;
@@ -309,29 +309,6 @@ describe('isReactive', () => {
   });
 });
 
-describe('adapt', () => {
-  it('brands any object with a subscribe method, and leaves it working as before', () => {
-    const listeners = new Set<(v: number) => void>();
-    const store = {
-      state: 1,
-      subscribe(callback: (v: number) => void) {
-        callback(this.state);
-        listeners.add(callback);
-        return () => {
-          listeners.delete(callback);
-        };
-      },
-    };
-    const adapted = adapt(store);
-    expect(adapted).toBe(store);
-    expect(isReactive(adapted)).toBe(true);
-    const { seen } = record(select(adapted, (v: number) => v * 2));
-    store.state = 5;
-    for (const listener of listeners) listener(5);
-    expect(seen).toEqual([2, 10]);
-  });
-});
-
 describe('patch', () => {
   it('merges nested objects key by key and keeps the rest', () => {
     const state = reactive({ a: 1, nested: { x: 1, y: 2 }, keep: 'k' });
@@ -461,8 +438,8 @@ describe('error handling', () => {
     expect(quiet(() => wrapped())).toBeUndefined();
   });
 
-  // Decision 3: an error thrown later, from a subscriber that runs on a change, reaches the handler of the ErrorBoundary the code
-  // was mounted under. So the handler is the one current when the wrapper is made, whatever is current when it throws.
+  // ADR 12: an error thrown later, from a subscriber that runs on a change, reaches the handler of the ErrorBoundary the code was
+  // mounted under. So the handler is the one current when the wrapper is made, whatever is current when it throws.
   it('reports a later error to the handler that was current when the wrapper was made', () => {
     const seen: unknown[] = [];
     const x = reactive(0);

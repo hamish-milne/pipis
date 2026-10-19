@@ -9,6 +9,7 @@ import {
   List,
   OneOf,
   Portal,
+  ReactiveList,
   PortalTarget,
   Suspense,
   Watch,
@@ -230,6 +231,170 @@ describe('List', () => {
     expect(label.active).toBe(2);
     items.value = [1];
     expect(label.active).toBe(1);
+  });
+});
+
+describe('ReactiveList', () => {
+  type Product = { id: number; name: string; quantity: number };
+  const initial: readonly Product[] = [
+    { id: 1, name: 'apple', quantity: 1 },
+    { id: 2, name: 'pear', quantity: 2 },
+    { id: 3, name: 'plum', quantity: 3 },
+  ];
+
+  function products(items: Reactive<readonly Product[]>, built: number[] = [], computed: string[] = []) {
+    return ReactiveList({
+      items,
+      itemKey: (p) => p.id,
+      children: (item) => {
+        built.push(item.value.id);
+        const name = select(item, (p) => {
+          computed.push(`name ${p.id}`);
+          return p.name;
+        });
+        const quantity = select(item, (p) => {
+          computed.push(`quantity ${p.id}`);
+          return String(p.quantity);
+        });
+        return h('li', {}, name, ' x ', quantity);
+      },
+    });
+  }
+
+  it('renders the items in order, each row given its item as a reactive value', () => {
+    const { root } = mount(products(reactive(initial)));
+    expect(html(root)).toBe('<li>apple x 1</li><li>pear x 2</li><li>plum x 3</li>');
+  });
+
+  it('updates a changed item in its own row, in place, without rebuilding or moving anything', () => {
+    const items = reactive(initial);
+    const built: number[] = [];
+    const { root } = mount(products(items, built));
+    const rows = [...root.querySelectorAll('li')];
+    const observer = new MutationObserver(() => {});
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    items.value = items.value.map((p) => (p.id === 2 ? { ...p, quantity: 9 } : p));
+    const records = observer.takeRecords();
+    observer.disconnect();
+    expect(html(root)).toBe('<li>apple x 1</li><li>pear x 9</li><li>plum x 3</li>');
+    expect(records).toHaveLength(1);
+    expect(built).toEqual([3, 2, 1]);
+    expect([...root.querySelectorAll('li')]).toEqual(rows);
+  });
+
+  it('does not run the bindings of a row whose item is the same object, so one change costs one row', () => {
+    const items = reactive(initial);
+    const computed: string[] = [];
+    mount(products(items, [], computed));
+    computed.length = 0;
+    items.value = items.value.map((p) => (p.id === 2 ? { ...p, quantity: 9 } : p));
+    // The changed row recomputes both selects; the other two rows are given the same object and compute nothing.
+    expect(computed.sort()).toEqual(['name 2', 'quantity 2']);
+  });
+
+  it('keeps rows when the list is reordered, and gives each its own item', () => {
+    const items = reactive(initial);
+    const { root } = mount(products(items));
+    const byText = new Map([...root.querySelectorAll('li')].map((li) => [li.textContent, li]));
+    items.value = [initial[2], initial[0], initial[1]].flatMap((p) => (p ? [p] : []));
+    const after = [...root.querySelectorAll('li')];
+    expect(after.map((li) => li.textContent)).toEqual(['plum x 3', 'apple x 1', 'pear x 2']);
+    for (const li of after) expect(li).toBe(byText.get(li.textContent));
+  });
+
+  it('adds and removes rows, building only the new ones and unmounting only the ones that left', () => {
+    const items = reactive(initial);
+    const built: number[] = [];
+    const log: string[] = [];
+    const { root } = mount(
+      ReactiveList({
+        items,
+        itemKey: (p) => p.id,
+        children: (item) => {
+          built.push(item.value.id);
+          return Fragment({ children: [logged(`row ${item.value.id}`, log), textNode(item.value.name)] });
+        },
+      }),
+    );
+    built.length = 0;
+    log.length = 0;
+    items.value = [...initial.slice(1), { id: 4, name: 'fig', quantity: 4 }];
+    expect(html(root)).toBe('pearplumfig');
+    expect(built).toEqual([4]);
+    expect(log).toEqual(['unmount row 1', 'mount row 4']);
+  });
+
+  it('builds a new row, from the current item, when a key that left comes back', () => {
+    const items = reactive<readonly Product[]>(initial);
+    const built: number[] = [];
+    const { root } = mount(products(items, built));
+    items.value = initial.filter((p) => p.id !== 1);
+    items.value = [{ id: 1, name: 'apricot', quantity: 7 }, ...initial.slice(1)];
+    expect(built.filter((id) => id === 1)).toHaveLength(2);
+    expect(html(root)).toBe('<li>apricot x 7</li><li>pear x 2</li><li>plum x 3</li>');
+  });
+
+  it('gives a row the index it had when it was made, which does not follow a reorder', () => {
+    const items = reactive(initial);
+    const seen: Record<number, number> = {};
+    mount(
+      ReactiveList({
+        items,
+        itemKey: (p) => p.id,
+        children: (item, index) => {
+          seen[item.value.id] = index;
+          return textNode('');
+        },
+      }),
+    );
+    items.value = [...initial].reverse();
+    expect(seen).toEqual({ 1: 0, 2: 1, 3: 2 });
+  });
+
+  it('removes its rows on unmount, shows the current items when remounted, and stops listening', () => {
+    const items = tracked(initial);
+    const element = products(items.reactive);
+    const { root, unmount } = mount(element);
+    expect(items.active).toBe(1);
+    unmount();
+    expect(html(root)).toBe('');
+    expect(items.active).toBe(0);
+    items.state.value = [{ id: 7, name: 'lime', quantity: 1 }];
+    element(root);
+    expect(html(root)).toBe('<li>lime x 1</li>');
+  });
+
+  it('unsubscribes a row’s bindings from its item when the row is removed', () => {
+    const items = reactive(initial);
+    const label = tracked('x');
+    mount(
+      ReactiveList({
+        items,
+        itemKey: (p) => p.id,
+        children: () => h('li', {}, label.reactive),
+      }),
+    );
+    expect(label.active).toBe(3);
+    items.value = initial.slice(0, 1);
+    expect(label.active).toBe(1);
+  });
+
+  it('renders the same as a List over the same items, through a run of adds, removes, reorders and edits', () => {
+    let seed = 7;
+    const next = (n: number) => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return Math.floor((seed / 4294967296) * n);
+    };
+    const items = reactive<readonly { id: number; text: string }[]>([{ id: 1, text: 'a' }]);
+    // A List cannot follow an edit to an item it already has, so the comparison list is rebuilt from the same items each time.
+    const live = mount(ReactiveList({ items, itemKey: (p) => p.id, children: (item) => h('li', {}, select(item, 'text')) }));
+    for (let step = 0; step < 200; step++) {
+      const ids = [1, 2, 3, 4, 5, 6].filter(() => next(2) === 1).sort(() => next(3) - 1);
+      items.value = ids.map((id) => ({ id, text: String.fromCharCode(97 + next(4)) }));
+      const fresh = mount(List({ items: reactive(items.value), itemKey: (p) => p.id, children: (p) => h('li', {}, p.text) }));
+      expect(html(live.root), `step ${step}`).toBe(html(fresh.root));
+      fresh.unmount();
+    }
   });
 });
 
@@ -596,7 +761,7 @@ describe('Watch', () => {
 });
 
 describe('Portal and PortalTarget', () => {
-  /** A target with nothing after it, which is the only place a dynamic element is positioned correctly today (see `siblingBug`). */
+  /** Two portals in a `main`, and a target after some text in an `aside`. */
   function layout(target: ReactiveState<PortalTargetValue>, portals: JSXElement[]) {
     return mount(h('div', {}, h('main', {}, ...portals), h('aside', {}, 'before', PortalTarget({ ref: target }))));
   }
@@ -785,7 +950,7 @@ describe('Suspense', () => {
     expect(html(root)).toBe('<p>fine</p>');
   });
 
-  // Decision 5: the latest promise wins. Today a slow older promise that settles last overwrites the newer result.
+  // ADR 14: the latest promise wins, so a slow older promise that settles last does not overwrite the newer result.
   it('shows the latest promise’s result even when an older one settles after it', async () => {
     const slow = deferred<string>();
     const fast = deferred<string>();
@@ -797,6 +962,23 @@ describe('Suspense', () => {
     slow.resolve('slow-old');
     await flush();
     expect(html(root)).toBe('<p>fast-new</p>');
+  });
+
+  it('ignores the rejection of a promise that has been replaced, and does not report it', async () => {
+    const old = deferred<string>();
+    const current = deferred<string>();
+    const promise = reactive(old.promise);
+    const seen: unknown[] = [];
+    const { root } = withErrorHandler(
+      (e) => seen.push(e),
+      () => mount(view(promise, '')),
+    );
+    promise.value = current.promise;
+    old.reject('stale failure');
+    current.resolve('fresh');
+    await flush();
+    expect(html(root)).toBe('<p>fresh</p>');
+    expect(seen).toEqual([]);
   });
 
   it('does nothing visible when the promise settles after unmount', async () => {
@@ -846,7 +1028,7 @@ describe('ErrorBoundary', () => {
     expect(log).toEqual(['mount first', 'unmount first']);
   });
 
-  // Decision 3: an error from a subscriber that runs later reaches the boundary too, and this is the common case.
+  // ADR 12: an error from a subscriber that runs later reaches the boundary too, and this is the common case.
   it('renders the fallback when a Watch under it throws on a later change', () => {
     const value = reactive(0);
     const { root } = mount(

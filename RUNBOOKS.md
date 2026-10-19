@@ -7,6 +7,8 @@ Step-by-step procedures for the chores that come round. Each says what to run an
 - [Update dependencies](#update-dependencies)
 - [Update the GitHub Actions](#update-the-github-actions)
 - [Update the toolchain](#update-the-toolchain)
+- [Change the size baseline](#change-the-size-baseline)
+- [Run the benchmark](#run-the-benchmark)
 - [Change the Node version the repository uses](#change-the-node-version-the-repository-uses)
 - [Investigate a failure that only happens in CI](#investigate-a-failure-that-only-happens-in-ci)
 
@@ -38,6 +40,26 @@ Every `uses:` in `.github/workflows` names a full commit hash with the release i
 - **Formatter (`oxfmt`) or linter (`oxlint` via Vite+):** bump it, run `pnpm vp fmt`, and commit the reformatting **by itself**. Add that commit's full hash to `.git-blame-ignore-revs`. If the new linter reports new things, fix them in separate commits, or add a rule override in `vite.config.ts` with a comment saying why. A rule change can make an old opt-out unused, which fails the build.
 - **TypeScript:** run `pnpm vp run check`.
 - **Vite+/Vitest:** run the whole suite; the test config is in `vite.config.ts`.
+
+## Change the size baseline
+
+`pnpm vp run size:check` (part of `all`) fails when a scenario's gzip size in `node tools/size.ts` is more than 2% and 16 bytes over
+`tools/size-baseline.json`. The core is what every user pays for, so growth there is never a side effect. When a size change is meant (a
+feature, or a dependency of it, that is worth its bytes):
+
+1. `node tools/size.ts` to see the table, and say in the commit message what the change costs and why it is worth it.
+2. `node tools/size.ts --update` writes the new baseline. Commit it with the change that moved it, so the diff of the baseline is the review of the cost.
+3. A decrease is worth recording too: run `--update` after a win, so the next growth is measured against it.
+4. If the README, `docs/adr/0015-size.md` or the introduction quote a size, update them from the same table.
+
+A scenario that is added or renamed needs a baseline entry (the check says so), and one that is removed has to leave the baseline.
+
+## Run the benchmark
+
+`node tools/bench.ts` runs the operations an app does most in real Chromium and prints a table (median of 9 runs after 2 warm-ups). Set
+`PIPIS_CHROMIUM` to use your own Chromium. The numbers depend on the machine and other load, so compare two runs made back to back on the
+same machine, not against a number in a document. For a change to a hot path, run it before and after and put both tables in the commit
+message. A new operation worth watching goes in `tools/bench-app.ts`.
 
 ## Change the Node version the repository uses
 

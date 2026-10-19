@@ -1,14 +1,14 @@
 # pipis
 
-_pipis_ is a tiny front-end framework for building UIs in JSX — under 1KB, no virtual DOM, no build magic. Write components like you would in React, but state updates go straight to the DOM node that needs them, nothing else re-runs.
+_pipis_ is a tiny front-end framework for building UIs in JSX — about 0.8 KB for the core, no virtual DOM, no build magic. Write components like you would in React, but state updates go straight to the DOM node that needs them, nothing else re-runs.
 
 ## Why?
 
 - **Fast by default.** No vDOM, no diffing, no memoization to think about. Only the DOM nodes bound to changed state ever update.
-- **Under 1KB.** Or if you import absolutely everything, under 2KB gzipped. Your app's code is the bundle.
+- **Tiny.** The core (`createElement` and text nodes) is about 0.8 KB gzipped. A counter app with reactive state is about 1.1 KB, and importing every export is about 2.4 KB. Each feature costs only what you import (`If` +0.14 KB, `List` +0.3 KB, `Suspense` +0.37 KB, for example). These are measured by `node tools/size.ts` and held by a CI check. Your app's code is the bundle.
 - **No hooks, no re-renders.** Components run once and return a function that mounts and unmounts them. No dependency arrays, no stale closures, no rules of hooks.
 - **Just functions.** An element is a function that inserts its content into the DOM: call it with a parent node to mount, call it with nothing to unmount. Stack traces look normal. Nothing is hidden from you.
-- **Bring your own state.** Use the built-in `reactive` helper, or wire up Zustand, RxJS, or anything else with a `subscribe` method.
+- **Bring your own state.** Use the built-in `reactive` helper, or wire up Zustand, RxJS, or any other store, signal or Observable with `adapt` (see the cookbook).
 
 ## Getting Started
 
@@ -98,24 +98,25 @@ In custom components, reactive values have no special handling - the props array
 
 When defining a prop, consider if you want the allowed value to be static (`T`), reactive (`Reactive<T>`), or either (`T | Reactive<T>`). You can check if a value is reactive at runtime with the `isReactive` function. A rule of thumb is to accept both if you're passing a value down the tree without inspecting it, otherwise defaulting to static unless you know the value can change dynamically.
 
-You can create custom reactive values by implementing the `Reactive<T>` interface, which allows binding values to an existing state management framework. For example, the Store object from `zustand/vanilla` already has a `subscribe` function, so all we need to do is set the `[REACTIVE]` property to `true`:
+You can create custom reactive values by implementing the `Reactive<T>` interface, which allows binding values to an existing state management framework. `adapt` turns a store, signal or Observable from another library into a reactive value (see the cookbook for Redux, RxJS, Svelte, Nanostores, Preact Signals, XState and more). If its `subscribe` gives the current value at once and returns a cleanup, pass it alone: `adapt(source)`. If it does not (Zustand, Redux, XState), also pass a function that reads the current value. For example, with Zustand:
 
 ```tsx
 import { createStore } from "zustand/vanilla";
-import { REACTIVE, select } from "pipis";
+import { adapt, select } from "pipis";
 
-const store = createStore((set) => ({
+const store = createStore<{ count: number; increment: () => void }>((set) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
 }));
 
-const reactiveStore = Object.assign(store, { [REACTIVE]: true });
+// Zustand's subscribe does not give the current state, so say how to read it.
+const count = select(adapt(store, () => store.getState()), "count");
 
 function App() {
   return (
     <div>
-      <p>Count: {select(reactiveStore, (s) => s.count)}</p>
-      <button onclick={store.increment}>Increment</button>
+      <p>Count: {count}</p>
+      <button onclick={store.getState().increment}>Increment</button>
     </div>
   );
 }
@@ -170,18 +171,39 @@ function App() {
 }
 ```
 
-For lists, you can use `List` to render items from an array, with a 'key' function to allow re-ordering:
+For lists, you can use `List` to render items from an array, with an `itemKey` function to allow re-ordering:
 
 ```tsx
 function App() {
   const items = reactive(["Item 1", "Item 2", "Item 3"]);
   return (
-    <List items={items} key={(item) => item}>
+    <List items={items} itemKey={(item) => item}>
       {(item) => <div>{item}</div>}
     </List>
   );
 }
 ```
+
+`List` makes each row once, from the plain item, and reuses it, so it suits items that do not change while their key stays the same. When rows show data that does change, use `ReactiveList`: each row is given its item as a reactive value, and only the bindings that depend on what changed run.
+
+```tsx
+type Product = { id: number; name: string; quantity: number };
+
+function App() {
+  const products = reactive<readonly Product[]>([{ id: 1, name: "Apple", quantity: 1 }]);
+  return (
+    <ReactiveList items={products} itemKey={(p) => p.id}>
+      {(product) => (
+        <div>
+          {select(product, "name")} x {select(product, "quantity")}
+        </div>
+      )}
+    </ReactiveList>
+  );
+}
+```
+
+Changing one product's quantity (assign a new array with that product replaced by a new object) updates that row's text and nothing else, and costs one pass over the array however many rows there are.
 
 Where all else fails, you can use `Dynamic` to render any content derived from any reactive value. Note that this will completely throw away and recreate the DOM nodes whenever the state changes which, naturally, is bad for performance. Consider carefully if one of the more structured patterns above could be used instead.
 

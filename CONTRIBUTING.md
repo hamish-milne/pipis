@@ -24,6 +24,8 @@ The toolchain is [Vite+](https://viteplus.dev) (`vp`): tests, lint, format, the 
 | `pnpm vp lint`                  | Lint. `pnpm vp run lint` is the strict form CI uses (no warnings, no unused disable comments).              |
 | `pnpm vp fmt`                   | Format. It rewrites files, so run it _before_ a scripted find-and-replace.                                  |
 | `pnpm vp dev` / `pnpm vp build` | The samples and docs site, and its production build.                                                        |
+| `pnpm vp run size`              | What each feature costs an app, in bytes (`size:check` is the gate and is part of `all`).                  |
+| `node tools/bench.ts`           | The micro-benchmark, in real Chromium. Run by hand before and after a change to a hot path.                |
 
 `pnpm vp run --concurrency-limit 2 all` is the definition of green. A change is not finished until it passes with no warnings.
 
@@ -34,7 +36,7 @@ When a rule does not cover a case, decide by these.
 - **Small, and pay for what you use.** Features are opt-in by import (`core`, then `reactive`, then `dynamic`). A feature that makes everything bigger is a bug; measure it.
 - **Zero runtime dependencies.** The library imports nothing but itself. The answer to a new runtime dependency is no.
 - **Components run once.** There is no virtual DOM and no re-rendering: reactive values bind straight to DOM nodes. A new capability fits that model or does not belong.
-- **Honest errors.** A mistake the user can make fails early, with a message that names the thing and says what to do.
+- **Honest errors.** A mistake the user can make fails early, with a message that names the thing and says what to do. A mistake the type checker already rejects needs no runtime check: where the compiler catches it, the runtime behaviour for that case matters far less.
 - **Docs and examples that cannot rot.** If it is documented it is tested.
 - **Written for readers, human and model.** Say _why_, not what. `LLM.md` is the reference written for AI agents; it must stay true.
 - **One definition of green, and it is the whole check.**
@@ -48,7 +50,8 @@ src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 src/docs/       the documentation pages and the site that renders them
 src/samples/    sample apps
-tools/          repository tooling (the action-pin check)
+tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark)
+docs/adr/      the design assumptions, one record each, with the tests and measurements that could disprove them
 LLM.md          the reference written for AI agents
 ```
 
@@ -78,11 +81,28 @@ LLM.md          the reference written for AI agents
 
 ### Known bugs are tests that fail on purpose
 
-A bug that has not been fixed yet is a test that states the _correct_ behaviour and is marked `it.fails` (or one of the named aliases at the bottom of `src/test/dom.ts`, each of which says what is broken and why). The check stays green while the bug is known, and turns red the moment it is fixed, which is the prompt to remove the marker. So:
+A bug that has not been fixed yet is a test that states the _correct_ behaviour and is marked `it.fails` (when several tests share one bug, a named alias for `it.fails` in `src/test/dom.ts`, whose comment says what is broken and why). The check stays green while the bug is known, and turns red the moment it is fixed, which is the prompt to remove the marker. So:
 
 - Fixing a bug means the test for it starts failing as a "failed expectation to fail". Change `it.fails` to `it` (for an alias, change the one line that defines it) in the same commit as the fix.
 - Before trusting a new `it.fails`, run it as a plain `it` once and read the failure: it must fail on the assertion you mean, not on a typo.
 - Do not add an `it.fails` to hide a failure you do not understand.
+
+## Design decisions
+
+The assumptions pipis is built on are written down in [docs/adr/](docs/adr/README.md), one short record each: the decision, why, the
+tests or measurements that could show it wrong, and what it costs. A change that alters one of them is a new record that says so, in
+the same commit as the change; a record is not edited to match the code. When a test or a measurement contradicts a record, that is a
+finding, and it is fixed or the record is superseded.
+
+## Size and speed
+
+- **Size** is measured by `node tools/size.ts` on small programs that use pipis the way an app would, and held by `size:check` (part of
+  `all`) against `tools/size-baseline.json`: gzip, 2% and 16 bytes of room. A change that grows the baseline says by how much, and why it
+  is worth it, in the commit message (see [RUNBOOKS](RUNBOOKS.md#change-the-size-baseline)). A feature that makes the core bigger is a
+  layering mistake. Only numbers from this table go in the README.
+- **Speed** is measured by `node tools/bench.ts`, in Chromium. It is not part of `all` because timings depend on the machine. Before and
+  after a change to a hot path (`reactive`, `select`, `createElement`, `List`), run it and put both tables in the commit message. Do
+  not optimise without a number.
 
 ## Making a change
 

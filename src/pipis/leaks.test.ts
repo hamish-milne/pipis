@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { Fragment, textNode, type JSXElement } from './core.ts';
 import { select } from './reactive.ts';
-import { Dynamic, ErrorBoundary, If, List, OneOf, Portal, Suspense, Watch, type PortalTargetValue } from './dynamic.ts';
+import { Dynamic, ErrorBoundary, If, List, OneOf, Portal, ReactiveList, Suspense, Watch, type PortalTargetValue } from './dynamic.ts';
 import { h, html, mount, tracked } from '../test/dom.ts';
 
 /**
@@ -24,6 +24,15 @@ const cases: Case[] = [
         items: select(input.reactive, (v) => [v, `${v}!`]),
         itemKey: (v) => v,
         children: (v) => textNode(v),
+      }),
+  },
+  {
+    name: 'ReactiveList',
+    build: (input) =>
+      ReactiveList({
+        items: select(input.reactive, (v) => [{ id: v }, { id: `${v}!` }]),
+        itemKey: (item) => item.id,
+        children: (item) => textNode(select(item, 'id')),
       }),
   },
   { name: 'OneOf', build: (input) => OneOf({ selector: input.reactive, children: { a: textNode('a') } }) },

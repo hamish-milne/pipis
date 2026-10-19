@@ -31,24 +31,25 @@ In custom components, reactive values have no special handling - the props objec
 
 When defining a prop, consider if you want the allowed value to be static (`T`), reactive (`Reactive<T>`), or either (`T | Reactive<T>`). You can check if a value is reactive at runtime with the `isReactive` function. A rule of thumb is to accept both if you're passing a value down the tree without inspecting it, otherwise defaulting to static unless you know the value can change dynamically.
 
-You can create custom reactive values by implementing the `Reactive<T>` interface, which allows binding values to an existing state management framework. For example, the Store object from `zustand/vanilla` already has a `subscribe` function, so all we need to do is set the `[REACTIVE]` property to `true`:
+You can create custom reactive values by implementing the `Reactive<T>` interface, which allows binding values to an existing state management framework. `adapt` turns a store, signal or Observable from another library into a reactive value (see the cookbook for Redux, RxJS, Svelte, Nanostores, Preact Signals, XState and more). If its `subscribe` gives the current value at once and returns a cleanup, pass it alone: `adapt(source)`. If it does not (Zustand, Redux, XState), also pass a function that reads the current value. For example, with Zustand:
 
 ```tsx
 import { createStore } from "zustand/vanilla";
-import { REACTIVE, select } from "pipis";
+import { adapt, select } from "pipis";
 
-const store = createStore((set) => ({
+const store = createStore<{ count: number; increment: () => void }>((set) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
 }));
 
-const reactiveStore = Object.assign(store, { [REACTIVE]: true });
+// Zustand's subscribe does not give the current state, so say how to read it.
+const count = select(adapt(store, () => store.getState()), "count");
 
 function App() {
   return (
     <div>
-      <p>Count: {select(reactiveStore, (s) => s.count)}</p>
-      <button onclick={store.increment}>Increment</button>
+      <p>Count: {count}</p>
+      <button onclick={store.getState().increment}>Increment</button>
     </div>
   );
 }

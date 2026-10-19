@@ -73,6 +73,27 @@ function App() {
 }
 ```
 
+`List` makes each row once, from the plain item, and reuses it, so it suits items that do not change while their key stays the same. When rows show data that does change, use `ReactiveList`: each row is given its item as a reactive value, and only the bindings that depend on what changed run.
+
+```tsx
+type Product = { id: number; name: string; quantity: number };
+
+function App() {
+  const products = reactive<readonly Product[]>([{ id: 1, name: "Apple", quantity: 1 }]);
+  return (
+    <ReactiveList items={products} itemKey={(p) => p.id}>
+      {(product) => (
+        <div>
+          {select(product, "name")} x {select(product, "quantity")}
+        </div>
+      )}
+    </ReactiveList>
+  );
+}
+```
+
+Changing one product's quantity (assign a new array with that product replaced by a new object) updates that row's text and nothing else, and costs one pass over the array however many rows there are.
+
 Where all else fails, you can use `Dynamic` to render any content derived from any reactive value. Note that this will completely throw away and recreate the DOM nodes whenever the state changes which, naturally, is bad for performance. Consider carefully if one of the more structured patterns above could be used instead.
 
 ```tsx

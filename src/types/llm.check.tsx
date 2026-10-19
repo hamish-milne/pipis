@@ -22,6 +22,7 @@ import {
   List,
   OneOf,
   Portal,
+  ReactiveList,
   PortalTarget,
   Suspense,
   Watch,
@@ -221,6 +222,30 @@ export function mistake11Right() {
   );
 }
 
+export function mistake11ReactiveListRight() {
+  const products = reactive<readonly (Row & { id: number })[]>([]);
+  // The list is the array of items itself, and each row is given its item as a reactive value.
+  return (
+    <ReactiveList items={products} itemKey={(p) => p.id}>
+      {(product) => (
+        <li>
+          {select(product, 'name')} x {select(product, 'quantity')} = {select(product, (p) => (p.price * p.quantity).toFixed(2))}
+        </li>
+      )}
+    </ReactiveList>
+  );
+}
+
+export function mistake11ReactiveListWrong() {
+  const products = reactive<readonly (Row & { id: number })[]>([]);
+  return (
+    <ReactiveList items={products} itemKey={(p) => p.id}>
+      {/* @ts-expect-error the row's item is a Reactive, not the item: select a field from it */}
+      {(product) => <li>{product.name}</li>}
+    </ReactiveList>
+  );
+}
+
 export function mistake11Constant() {
   return (
     <List items={constant(['a', 'b'])} itemKey={(item) => item}>
@@ -240,10 +265,16 @@ export function mistake12Wrong() {
   ];
 }
 
-// The DOM typings give HTMLFormElement a string index signature, so ANY unknown prop on <form> compiles: React's onSubmit and
-// `class` are not type errors there, only silent no-ops at runtime. LLM.md's "WRONG" for onSubmit is a runtime mistake.
-export function formAcceptsAnyProp() {
-  return <form onSubmit={fn} class="x" />;
+// `HTMLFormElement` has a string index signature in the DOM typings (for its named controls), which would let any misspelt prop through.
+// The intrinsic element types drop it, so a `<form>` is checked like every other element.
+export function formIsCheckedLikeAnyOther() {
+  return [
+    // @ts-expect-error React's name: use `onsubmit`
+    <form onSubmit={fn} />,
+    // @ts-expect-error `class` is not a property of an HTML element: use className
+    <form class="x" />,
+    <form onsubmit={fn} className="x" method="post" action="/x" noValidate />,
+  ];
 }
 
 export function mistake12Right() {

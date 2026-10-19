@@ -1,0 +1,23 @@
+{
+  "tolerance": 0.02,
+  "slackBytes": 16,
+  "gzip": {
+    "A static element (core only)": 784,
+    "The counter app": 1118,
+    "The counter app written as JSX": 1135,
+    "patch": 1258,
+    "If": 1257,
+    "OneOf": 1279,
+    "List": 1449,
+    "ReactiveList": 1473,
+    "adapt (a store from another library)": 1182,
+    "Dynamic": 1269,
+    "Effect": 1178,
+    "Watch": 1204,
+    "Suspense": 1483,
+    "ErrorBoundary": 1344,
+    "Portal + PortalTarget": 1339,
+    "Helmet": 1189,
+    "Everything: every export, in one program": 2412
+  }
+}
