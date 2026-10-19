@@ -50,7 +50,8 @@ src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 src/docs/       the documentation pages and the site that renders them
 src/samples/    sample apps
-tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark)
+tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark,
+                the import-layer check, and the packer and its test)
 docs/adr/      the design assumptions, one record each, with the tests and measurements that could disprove them
 LLM.md          the reference written for AI agents
 ```
@@ -63,7 +64,7 @@ LLM.md          the reference written for AI agents
 - **Import with the real extension:** `import { x } from './x.ts'`. Type-only imports use `import type` or `{ type X }` (`verbatimModuleSyntax`).
 - **No `any`, no `@ts-ignore`, no `@ts-nocheck`.** `@ts-expect-error` needs a description. Where `any` is truly the honest type, the line opts out with `// oxlint-disable-next-line <rule>` and a reason (see `PropBag` in `core.ts`).
 - **No non-null assertions (`x!`).** Narrow, guard, or restructure.
-- **Casts (`as T`) are discouraged** and are audited in a later phase; do not add new ones where narrowing, a type guard or a generic will do.
+- **No casts (`as T`) in the library.** The rule is on for every `src/pipis` module that is not a test. Where a cast is the honest answer, the line opts out with `// oxlint-disable-next-line typescript/consistent-type-assertions -- <reason>`; there are a handful, each in [ADR 18](docs/adr/0018-casts-and-any.md). Prefer narrowing, a type guard, a generic, or `unknown` through an implementation behind a typed overload. Tests, tools and the site are not held to it.
 - **Unused lint directives fail the build.** Delete an opt-out when the code it excused is gone.
 - **Format is the formatter's** (oxfmt: width 140, single quotes). Do not hand-format against it, and do not mix reformatting into a change. A formatter run is its own commit, listed in `.git-blame-ignore-revs`.
 - **Comments explain why:** a constraint, an invariant, a decision. No narration of the next line, no commented-out code. A change that makes a comment wrong fixes it in the same commit.
@@ -86,6 +87,12 @@ A bug that has not been fixed yet is a test that states the _correct_ behaviour 
 - Fixing a bug means the test for it starts failing as a "failed expectation to fail". Change `it.fails` to `it` (for an alias, change the one line that defines it) in the same commit as the fix.
 - Before trusting a new `it.fails`, run it as a plain `it` once and read the failure: it must fail on the assertion you mean, not on a typo.
 - Do not add an `it.fails` to hide a failure you do not understand.
+
+## Architecture rules the checks hold
+
+- **The library is layers an app opts into by importing them.** `tools/deps.ts` says what each module of `src/pipis` may import at run time: `core` nothing; `reactive` only `core`; `dynamic` `core` and `reactive`; `jsx-runtime` only `core`; `jsx-dev-runtime` `jsx-runtime`. A module that needs another has to say so there, on purpose, and `pnpm vp run deps` fails (with the module named) on any other import, any cycle, any import from outside the library, and any new file in `src/pipis` that has not been classified. Only _runtime_ imports count: a type-only import is free, so write `import type` for one.
+- **The platform floor is ES2015 for APIs** ([ADR 16](docs/adr/0016-platform-floor.md)); the syntax is newer and is the app's bundler's to lower. `tsconfig.lib.json` compiles the library against ES2015 built-ins with no Node types (`Array.prototype.flat`, `includes`, `Object.entries`, `at` and `toSorted` are errors), and a lint rule at Baseline 2015 reports newer global APIs and syntax that is not on its accepted list. A newer API behind a real feature check gets a lint comment that says so. Tests, tools and the docs site are not held to it.
+- **The package is the source with its types blanked out** ([ADR 17](docs/adr/0017-package-shape.md)), which is why the code is erasable TypeScript only. `pnpm vp run pack:test` builds it, installs it into a clean project, type-checks a JSX app there under `bundler` and `node16` resolution, and runs it. A change to what ships (a new module, an entry point) shows up there first.
 
 ## Design decisions
 

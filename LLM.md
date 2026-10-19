@@ -2,7 +2,9 @@
 
 pipis is a small JSX UI framework with **no virtual DOM, no re-rendering and no hooks**. Read this whole file before writing code. Sections are ordered by how much they matter. A checklist to run before you answer is at the end.
 
-Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths. The only extra entry points are `pipis/markdown` and `pipis/highlight` (see the end of the API section). Never import from `react`.
+Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write. Never import from `react`.
+
+To use JSX, the project's `tsconfig.json` needs `"jsx": "react-jsx"` and `"jsxImportSource": "pipis"` (and its bundler the same import source: Vite `esbuild: { jsxImportSource: "pipis" }`). A single file can instead start with `/** @jsxImportSource pipis */`. pipis needs a DOM and ES2015 built-ins (`Map`, `Set`, `Symbol`); its source uses newer syntax (`??`, `?.`, `??=`), which a bundler targeting an older browser must lower.
 
 ## 1. The mental model (5 rules)
 
@@ -600,11 +602,6 @@ Portal({ target: Reactive<PortalTargetValue>, children }): JSXElement
 Helmet(props: ChildrenProp): JSXElement                       // renders its children into document.head
 ```
 `Portal` renders its children at the target's live position. Several Portals to one target insert in mount order.
-
-### Extra entry points (separate imports, extra dependencies)
-
-- `pipis/markdown`: `Markdown({ content, renderer? })` and `renderToken(token)`. Built on marked; pass a custom renderer function per token type for styling or syntax highlighting.
-- `pipis/highlight`: `HighlightJS({ children, language? })`, a highlight.js wrapper; use it inside Markdown's `code` renderer.
 
 ## 8. Styling and DOM notes
 

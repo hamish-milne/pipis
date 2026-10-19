@@ -24,3 +24,6 @@ compare ratios, not the absolute figures.
 | [13](0013-namespaces.md)                   | HTML is tried first, then SVG; MathML is not supported                      |
 | [14](0014-suspense.md)                     | `Suspense`: the latest promise wins                                         |
 | [15](0015-size.md)                         | Size claims are measured, and a gate holds them                             |
+| [16](0016-platform-floor.md)               | The platform floor is Baseline 2021                                         |
+| [17](0017-package-shape.md)                | The package ships its own source, with the types blanked out                |
+| [18](0018-casts-and-any.md)                | Casts and `any` in the library are owned in writing                         |

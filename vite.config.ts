@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.{ts,mjs}'],
+    // Each project says what it runs: an `include` here would be merged into both.
     // A fresh process per file, so a test that leaves a subscriber or a DOM node behind cannot colour the next one.
     pool: 'forks',
     isolate: true,
@@ -64,12 +64,17 @@ export default defineConfig({
   run: {
     // `vp run all` is everything CI runs. Tasks that write files are not cached.
     tasks: {
-      check: { command: 'tsc -p .' },
+      // Everything, then the library alone against the platform floor (ES2021 built-ins, no Node types).
+      check: { command: ['tsc -p .', 'tsc -p tsconfig.lib.json'] },
       lint: { command: 'vp lint --deny-warnings --report-unused-disable-directives' },
       fmt: { command: 'vp fmt', cache: false },
       'fmt:check': { command: 'vp fmt --check' },
       // The DOM tests run in jsdom and in Chromium (see `test.projects`); coverage is recorded on every run.
-      test: { command: 'vp test run --coverage', cache: false },
+      test: { command: 'vp test run src/ --coverage', cache: false },
+      // The import graph is held to its layers, so a feature cannot become a cost of everything.
+      deps: { command: 'vp test run tools/deps.test.ts' },
+      // The tarball a release publishes: built, installed into a clean project, type-checked there and run.
+      'pack:test': { command: 'vp test run tools/pack.test.ts', cache: false },
       actions: { command: 'node tools/actions.ts check' },
       // What each feature costs an app, against the committed baseline. `size` prints the table.
       size: { command: 'node tools/size.ts', cache: false },
@@ -78,7 +83,7 @@ export default defineConfig({
       all: {
         command: 'echo all green',
         cache: false,
-        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'actions', 'size:check', 'build'],
+        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'deps', 'actions', 'size:check', 'pack:test', 'build'],
       },
     },
   },
@@ -130,10 +135,47 @@ export default defineConfig({
       'typescript/consistent-return': 'off',
       'typescript/no-unnecessary-type-parameters': 'off',
     },
+    // The platform the library may assume (docs/adr/0016-platform-floor.md): no API newer than Baseline 2015 in what ships.
+    jsPlugins: ['eslint-plugin-baseline-js'],
     overrides: [
+      // No `env` for the library itself: with globals declared, the Baseline rule takes `Object` and `Map` for the program's own names
+      // and sees nothing. TypeScript knows the library's globals; everything else is given them here.
       {
-        files: ['src/**', 'tools/**', '*.ts'],
+        files: [
+          'src/test/**',
+          'src/docs/**',
+          'src/samples/**',
+          'src/*.tsx',
+          'src/pipis/*.test.ts',
+          'src/pipis/*.test.tsx',
+          'src/pipis/markdown.tsx',
+          'src/pipis/highlight.tsx',
+          'tools/**',
+          '*.ts',
+        ],
         env: { browser: true, node: true, es2022: true },
+      },
+      {
+        files: ['src/pipis/*.ts'],
+        rules: {
+          'baseline-js/use-baseline': [
+            'error',
+            {
+              available: 2015,
+              includeWebApis: { preset: 'auto' },
+              includeJsBuiltins: { preset: 'auto' },
+              // The floor is for the APIs the library calls, which an app cannot lower. Syntax can be lowered by the app's bundler, so the
+              // syntax the library is written in is listed here, on purpose; newer syntax the rule recognises, and is not listed, fails.
+              ignoreFeatures: ['let-const', 'class-syntax', 'destructuring', 'spread', 'nullish-coalescing', 'logical-assignments'],
+            },
+          ],
+          // A cast is a claim the compiler cannot check, so each one in the library is owned in writing: a comment that gives the reason.
+          'typescript/consistent-type-assertions': ['error', { assertionStyle: 'never' }],
+        },
+      },
+      {
+        files: ['src/pipis/*.test.ts'],
+        rules: { 'baseline-js/use-baseline': 'off', 'typescript/consistent-type-assertions': 'off' },
       },
     ],
   },

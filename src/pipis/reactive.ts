@@ -26,6 +26,7 @@ export function adapt<T>(
       const listener = current ? () => callback(current()) : callback;
       // The overloads guarantee that the listener is the kind this source takes (one that reads `current` for one that has a getter,
       // the callback itself for one that gives the value), but TypeScript cannot follow that through a union of the two source types.
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- see the comment above: the overloads make this safe
       const subscription = (source as { subscribe(callback: typeof listener): Unsubscribable }).subscribe(listener);
       return typeof subscription === 'function' ? subscription : () => subscription.unsubscribe();
     },
@@ -96,27 +97,26 @@ export type DeepPartial<T> = T extends object
   : T;
 
 /** Only a plain object (one made by `{}` or `Object.create(null)`) is merged key by key; an array, a Date, a Map or a class instance is a value. */
-function isMergeable(value: unknown): value is object {
+function isMergeable(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== 'object') return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
 }
 
-function mergeDeep<T>(target: T, source: DeepPartial<T>): T {
+function mergeDeep(target: unknown, source: unknown): unknown {
   if (isMergeable(source) && isMergeable(target)) {
-    const result: T = { ...target };
-    for (const key in source) {
-      if (Object.prototype.hasOwnProperty.call(source, key)) {
-        result[key as keyof T] = mergeDeep(target[key as keyof T], source[key as keyof typeof source] as DeepPartial<T[keyof T]>);
-      }
+    const result = { ...target };
+    for (const key of Object.keys(source)) {
+      result[key] = mergeDeep(target[key], source[key]);
     }
     return result;
   }
-  return source as T;
+  return source;
 }
 
 export function patch<T>(state: ReactiveState<T>, partial: DeepPartial<T>): void {
-  state.value = mergeDeep(state.value, partial);
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- the merge only replaces keys that `partial` names, with values of the type those keys have in `T`, so the result is a `T`
+  state.value = mergeDeep(state.value, partial) as T;
 }
 
 const UNDEFINED = Symbol();
@@ -153,8 +153,8 @@ export function select<TIn, TOut>(input: Reactive<TIn>, compute: (input: TIn) =>
 /** Derives a read-only reactive value by selecting a single property key out of `input`. */
 export function select<TIn, TKey extends keyof TIn>(input: Reactive<TIn>, key: TKey): Reactive<TIn[TKey]>;
 
-export function select<TIn, TOut>(input: Reactive<TIn>, compute: ((input: TIn) => TOut) | keyof TIn): Reactive<TOut> {
-  return new ReactiveSelect(input, typeof compute === 'function' ? compute : (input: TIn) => input[compute] as TOut);
+export function select<TIn>(input: Reactive<TIn>, compute: ((input: TIn) => unknown) | keyof TIn): Reactive<unknown> {
+  return new ReactiveSelect(input, typeof compute === 'function' ? compute : (value: TIn) => value[compute]);
 }
 
 class ReactiveConstant<T> implements Reactive<T> {

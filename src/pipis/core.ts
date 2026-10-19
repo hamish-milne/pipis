@@ -26,6 +26,7 @@ export function subscribe<T>(reactive: Reactive<T>, callback: (value: T) => void
 export type MaybeReactive<T> = Reactive<T> | T;
 
 /** Runtime type guard for {@link Reactive} values, based on the {@link REACTIVE} brand. */
+// oxlint-disable-next-line typescript/consistent-type-assertions -- the brand is read off any value at all, which is the check that makes it a Reactive; narrowing to read it costs 19 bytes in every app
 export const isReactive = <T>(value: unknown): value is Reactive<T> => (value as Reactive<T> | null)?.[REACTIVE] === true;
 
 export type JSXParent = Node | undefined;
@@ -68,6 +69,18 @@ export type RefProp<T> = {
 /** A {@link JSXElement} that renders nothing; on mount, returns `sibling` unchanged. */
 export const emptyElement: JSXElement = (parent, sibling = null) => sibling;
 
+// `Array.isArray` does not narrow a readonly array, which is what a list of children is.
+const isChildArray = (child: JSXChild | JSXChildArray | undefined): child is JSXChildArray => Array.isArray(child);
+
+/** Turns a child, or arrays of children nested to any depth, into elements: nothing for `null`, `undefined` and `false`, text for the rest. */
+function collectChildren(child: JSXChild | JSXChildArray | undefined, into: JSXElement[]) {
+  if (isChildArray(child)) {
+    for (const nested of child) collectChildren(nested, into);
+  } else if (child != null && child !== false) {
+    into.push(typeof child === 'function' ? child : textNode(child));
+  }
+}
+
 /**
  * Renders a `<>...</>` fragment: a sequence of children with no wrapping DOM node.
  * Collapses to the child itself (or {@link emptyElement}) when there are 0 or 1 children,
@@ -78,12 +91,8 @@ export const emptyElement: JSXElement = (parent, sibling = null) => sibling;
  * dynamic rendering utilities.
  */
 export function Fragment({ children }: ChildrenProp): JSXElement {
-  let childElements: JSXElement[] = [];
-  for (const child of (Array.isArray(children) ? children : [children]).flat(7) as JSXChild[]) {
-    if (child != null && child !== false) {
-      childElements.push(typeof child === 'function' ? child : textNode(child));
-    }
-  }
+  const childElements: JSXElement[] = [];
+  collectChildren(children, childElements);
   childElements.reverse();
   if (childElements.length <= 1) {
     return childElements[0] ?? emptyElement;
@@ -218,7 +227,7 @@ type PropValue = string | number | boolean | null | undefined;
 // oxlint-disable-next-line typescript/no-explicit-any
 type PropBag = Record<string, any>;
 
-function setAttribute(element: unknown, key: string, value: PropValue) {
+function setAttribute(element: Element | CSSStyleDeclaration, key: string, value: PropValue) {
   if (element instanceof SVGElement || (element instanceof Element && key.startsWith('data-'))) {
     // Not `dataset`: it wants camelCase names and throws for a dashed one such as `data-multi-word`.
     // Setting the value to null or undefined would leave the attribute there, so it has to be removed.
@@ -228,13 +237,14 @@ function setAttribute(element: unknown, key: string, value: PropValue) {
       element.setAttribute(key, String(value));
     }
   } else {
-    (element as Record<string, unknown>)[key] = value;
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- the key is a prop name, so which property it is depends on the props, and `Element` has no index
+    (element as unknown as Record<string, unknown>)[key] = value;
   }
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-type BindingEntry = [obj: unknown, key: string, reactive: Reactive<PropValue>, cleanup: Cleanup | null];
+type BindingEntry = [obj: Element | CSSStyleDeclaration, key: string, reactive: Reactive<PropValue>, cleanup: Cleanup | null];
 /**
  * Renders an intrinsic HTML or SVG element. Static props are set once at construction;
  * {@link Reactive} props are subscribed on mount and unsubscribed on unmount. The underlying DOM
@@ -244,16 +254,20 @@ type BindingEntry = [obj: unknown, key: string, reactive: Reactive<PropValue>, c
  * neither (a typo that got past the types) is an `SVGElement`, not the `HTMLUnknownElement` one would expect, and a MathML tag
  * is not given the MathML namespace, because every MathML element has the one class and nothing tells it from an unknown tag.
  */
-export function createElement<T extends keyof CoreIntrinsicElements>(type: T, props: CoreIntrinsicElements[T]): JSXElement {
-  let element = document.createElement(type) as AllElements[T];
+export function createElement<T extends keyof CoreIntrinsicElements>(type: T, props: CoreIntrinsicElements[T]): JSXElement;
+
+// The implementation reads the props by name, and which element it makes depends on the tag at run time, so there is nothing narrower
+// to say here than the DOM's own `Element`: the overload above is the typed face of it.
+export function createElement(type: string, props: PropBag): JSXElement {
+  let element: Element = document.createElement(type);
   // SVG has no 'unknown element' class to ask for, but HTML does, so SVG is whatever HTML does not know. (A custom element name,
   // such as `my-widget`, is a plain HTMLElement and stays HTML.)
   if (element instanceof HTMLUnknownElement) {
-    element = document.createElementNS(SVG_NS, type) as AllElements[T];
+    element = document.createElementNS(SVG_NS, type);
   }
   const bindings: BindingEntry[] = [];
 
-  const addBinding = (obj: unknown, value: PropValue | Reactive<PropValue>, key: string) => {
+  const addBinding = (obj: Element | CSSStyleDeclaration, value: PropValue | Reactive<PropValue>, key: string) => {
     if (isReactive(value)) {
       bindings.push([obj, key, value, null]);
     } else {
@@ -265,9 +279,11 @@ export function createElement<T extends keyof CoreIntrinsicElements>(type: T, pr
     if (key === 'children' || key === 'ref') {
       continue;
     }
-    const value = (props as PropBag)[key];
+    const value = props[key];
     if (key === 'style') {
-      const obj = element[key as NestedKey];
+      // `style` is on HTML and SVG elements but not on `Element`, which is all the DOM says an element made by tag name is.
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- `Element` has no `style`; the HTML and SVG elements that props can name it for do
+      const obj = (element as HTMLElement).style;
       const styles: PropBag = value;
       for (const nestedKey in styles) {
         addBinding(obj, styles[nestedKey], nestedKey);

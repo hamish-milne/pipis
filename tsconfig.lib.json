@@ -1,0 +1,8 @@
+{
+  // The library as it ships, held to the platform in docs/adr/0016-platform-floor.md: ES2015 built-ins (the syntax is newer, and is the app's bundler's to lower), the DOM,
+  // and no Node types. `vp run check` runs it; the Baseline rule in vite.config.ts is the other half.
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "lib": ["es2015", "dom", "dom.iterable"], "types": [] },
+  "include": ["src/pipis/*.ts"],
+  "exclude": ["src/pipis/*.test.ts"]
+}
