@@ -9,58 +9,52 @@ export interface SVGGlobalAttributes {
   lang?: string;
   role?: string;
   style?: string;
-  "data-*"?: string; // Caught dynamically in practice, represented here as an index/placeholder
+  'data-*'?: string; // Caught dynamically in practice, represented here as an index/placeholder
   [key: `data-${string}`]: string | undefined;
 }
 
 // Presentation attributes (Styling that can be set as markup attributes)
 export interface SVGPresentationAttributes {
-  "alignment-baseline"?: string;
-  "clip-path"?: string;
-  "clip-rule"?: string;
+  'alignment-baseline'?: string;
+  'clip-path'?: string;
+  'clip-rule'?: string;
   color?: string;
   cursor?: string;
   direction?: string;
   display?: string;
-  "dominant-baseline"?: string;
+  'dominant-baseline'?: string;
   fill?: string;
-  "fill-opacity"?: string | number;
-  "fill-rule"?: "nonzero" | "evenodd" | "inherit";
+  'fill-opacity'?: string | number;
+  'fill-rule'?: 'nonzero' | 'evenodd' | 'inherit';
   filter?: string;
-  "font-family"?: string;
-  "font-size"?: string | number;
-  "font-style"?: string;
-  "font-weight"?: string | number;
-  "letter-spacing"?: string | number;
+  'font-family'?: string;
+  'font-size'?: string | number;
+  'font-style'?: string;
+  'font-weight'?: string | number;
+  'letter-spacing'?: string | number;
   mask?: string;
   opacity?: string | number;
   overflow?: string;
-  "pointer-events"?: string;
+  'pointer-events'?: string;
   stroke?: string;
-  "stroke-dasharray"?: string | number;
-  "stroke-dashoffset"?: string | number;
-  "stroke-linecap"?: "butt" | "round" | "square" | "inherit";
-  "stroke-linejoin"?: "miter" | "round" | "bevel" | "inherit";
-  "stroke-miterlimit"?: string | number;
-  "stroke-opacity"?: string | number;
-  "stroke-width"?: string | number;
-  "text-anchor"?: "start" | "middle" | "end" | "inherit";
-  "text-decoration"?: string;
+  'stroke-dasharray'?: string | number;
+  'stroke-dashoffset'?: string | number;
+  'stroke-linecap'?: 'butt' | 'round' | 'square' | 'inherit';
+  'stroke-linejoin'?: 'miter' | 'round' | 'bevel' | 'inherit';
+  'stroke-miterlimit'?: string | number;
+  'stroke-opacity'?: string | number;
+  'stroke-width'?: string | number;
+  'text-anchor'?: 'start' | 'middle' | 'end' | 'inherit';
+  'text-decoration'?: string;
   transform?: string;
-  "transform-origin"?: string;
-  vector_effect?:
-    | "none"
-    | "non-scaling-stroke"
-    | "non-scaling-size"
-    | "non-rotation"
-    | "fixed-position";
-  visibility?: "visible" | "hidden" | "collapse" | "inherit";
-  "writing-mode"?: string;
+  'transform-origin'?: string;
+  vector_effect?: 'none' | 'non-scaling-stroke' | 'non-scaling-size' | 'non-rotation' | 'fixed-position';
+  visibility?: 'visible' | 'hidden' | 'collapse' | 'inherit';
+  'writing-mode'?: string;
 }
 
 // Intermediate type for standard visual/renderable elements
-export interface SVGGraphicsElementAttributes
-  extends SVGGlobalAttributes, SVGPresentationAttributes {}
+export interface SVGGraphicsElementAttributes extends SVGGlobalAttributes, SVGPresentationAttributes {}
 
 // Intermediate type for structural/container elements
 export interface SVGContainerElementAttributes extends SVGGraphicsElementAttributes {}
@@ -91,7 +85,7 @@ export interface SVGCircleElementAttributes extends SVGGraphicsElementAttributes
 }
 
 export interface SVGClipPathElementAttributes extends SVGGlobalAttributes {
-  clipPathUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  clipPathUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
 }
 
 export interface SVGDefsElementAttributes extends SVGContainerElementAttributes {}
@@ -108,8 +102,8 @@ export interface SVGFilterElementAttributes extends SVGGlobalAttributes {
   y?: string | number;
   width?: string | number;
   height?: string | number;
-  filterUnits?: "userSpaceOnUse" | "objectBoundingBox";
-  primitiveUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  filterUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  primitiveUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
 }
 
 export interface SVGGElementAttributes extends SVGContainerElementAttributes {}
@@ -135,9 +129,9 @@ export interface SVGLinearGradientElementAttributes extends SVGGlobalAttributes 
   y1?: string | number;
   x2?: string | number;
   y2?: string | number;
-  gradientUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
   gradientTransform?: string;
-  spreadMethod?: "pad" | "reflect" | "repeat";
+  spreadMethod?: 'pad' | 'reflect' | 'repeat';
   href?: string;
 }
 
@@ -146,8 +140,8 @@ export interface SVGMaskElementAttributes extends SVGContainerElementAttributes 
   y?: string | number;
   width?: string | number;
   height?: string | number;
-  maskUnits?: "userSpaceOnUse" | "objectBoundingBox";
-  maskContentUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  maskUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  maskContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
 }
 
 export interface SVGPathElementAttributes extends SVGGraphicsElementAttributes {
@@ -160,8 +154,8 @@ export interface SVGPatternElementAttributes extends SVGContainerElementAttribut
   y?: string | number;
   width?: string | number;
   height?: string | number;
-  patternUnits?: "userSpaceOnUse" | "objectBoundingBox";
-  patternContentUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  patternUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  patternContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
   patternTransform?: string;
   viewBox?: string;
   preserveAspectRatio?: string;
@@ -183,9 +177,9 @@ export interface SVGRadialGradientElementAttributes extends SVGGlobalAttributes 
   fx?: string | number;
   fy?: string | number;
   fr?: string | number;
-  gradientUnits?: "userSpaceOnUse" | "objectBoundingBox";
+  gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
   gradientTransform?: string;
-  spreadMethod?: "pad" | "reflect" | "repeat";
+  spreadMethod?: 'pad' | 'reflect' | 'repeat';
   href?: string;
 }
 
@@ -210,8 +204,8 @@ export interface SVGSVGElementAttributes extends SVGContainerElementAttributes {
 
 export interface SVGStopElementAttributes extends SVGGlobalAttributes, SVGPresentationAttributes {
   offset?: string | number;
-  "stop-color"?: string;
-  "stop-opacity"?: string | number;
+  'stop-color'?: string;
+  'stop-opacity'?: string | number;
 }
 
 export interface SVGSymbolElementAttributes extends SVGContainerElementAttributes {
@@ -227,13 +221,13 @@ export interface SVGSymbolElementAttributes extends SVGContainerElementAttribute
 
 export interface SVGTextElementAttributes extends SVGTextContentElementAttributes {
   rotate?: string | number;
-  lengthAdjust?: "spacing" | "spacingAndGlyphs";
+  lengthAdjust?: 'spacing' | 'spacingAndGlyphs';
   textLength?: string | number;
 }
 
 export interface SVGTSpanElementAttributes extends SVGTextContentElementAttributes {
   rotate?: string | number;
-  lengthAdjust?: "spacing" | "spacingAndGlyphs";
+  lengthAdjust?: 'spacing' | 'spacingAndGlyphs';
   textLength?: string | number;
 }
 

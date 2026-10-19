@@ -2,20 +2,13 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ./pipis */
 
-import "./samples/styles.css";
-import { select, reactive } from "./pipis/reactive";
-import {
-  ErrorBoundary,
-  List,
-  Portal,
-  PortalTarget,
-  Suspense,
-  type PortalTargetValue,
-} from "./pipis/dynamic";
-import type { JSXElement } from "./pipis/core";
-import { Markdown, renderToken } from "./pipis/markdown";
-import readme from "../README.md?raw";
-import { HighlightJS } from "./pipis/highlight";
+import './samples/styles.css';
+import { select, reactive } from './pipis/reactive';
+import { ErrorBoundary, List, Portal, PortalTarget, Suspense, type PortalTargetValue } from './pipis/dynamic';
+import type { JSXElement } from './pipis/core';
+import { Markdown, renderToken } from './pipis/markdown';
+import readme from '../README.md?raw';
+import { HighlightJS } from './pipis/highlight';
 
 export function Counter() {
   const count = reactive(0);
@@ -30,7 +23,7 @@ export function Counter() {
 
 export function TodoApp() {
   const todos = reactive<readonly string[]>([]);
-  const newTodo = reactive("");
+  const newTodo = reactive('');
 
   function todoItem(item: string, index: number) {
     return (
@@ -59,7 +52,7 @@ export function TodoApp() {
         <button
           onclick={() => {
             todos.value = [...todos.value, newTodo.value];
-            newTodo.value = "";
+            newTodo.value = '';
           }}
         >
           Add Todo
@@ -86,17 +79,13 @@ function PortalExample() {
 
 function ComponentThatThrowsOnMount(): JSXElement {
   return () => {
-    throw new Error("ComponentThatThrowsOnMount threw an error on mount");
+    throw new Error('ComponentThatThrowsOnMount threw an error on mount');
   };
 }
 
 function ErrorBoundaryExample() {
   return (
-    <ErrorBoundary
-      fallback={(err) => (
-        <p>Error: {select(err, (e) => (e as Error)?.message ?? "Unknown error")}</p>
-      )}
-    >
+    <ErrorBoundary fallback={(err) => <p>Error: {select(err, (e) => (e as Error)?.message ?? 'Unknown error')}</p>}>
       <ComponentThatThrowsOnMount />
     </ErrorBoundary>
   );
@@ -105,10 +94,10 @@ function ErrorBoundaryExample() {
 function SuspenseExample() {
   return (
     <Suspense
-      promise={() => new Promise<string>((resolve) => setTimeout(() => resolve("Some data"), 2000))}
+      promise={() => new Promise<string>((resolve) => setTimeout(() => resolve('Some data'), 2000))}
       emptyData=""
       loading={<p>Loading...</p>}
-      error={(err) => <p>Error: {select(err, (e) => (e as Error)?.message ?? "Unknown error")}</p>}
+      error={(err) => <p>Error: {select(err, (e) => (e as Error)?.message ?? 'Unknown error')}</p>}
     >
       {(data) => <p>Content loaded successfully: {data}</p>}
     </Suspense>
@@ -116,7 +105,7 @@ function SuspenseExample() {
 }
 
 function ListExample() {
-  const items = reactive<readonly string[]>(["Item 1", "Item 2", "Item 3"]);
+  const items = reactive<readonly string[]>(['Item 1', 'Item 2', 'Item 3']);
 
   // Insertion test: every 0.2s, add a new item to the list in a random position
   setInterval(() => {
@@ -141,7 +130,7 @@ function MarkdownExample() {
       content={readme}
       renderer={(token) => {
         switch (token.type) {
-          case "code":
+          case 'code':
             return (
               <pre>
                 <HighlightJS language={token.lang}>{token.text}</HighlightJS>
@@ -156,9 +145,9 @@ function MarkdownExample() {
 }
 
 function InlineStyleExample() {
-  const color = reactive("red");
+  const color = reactive('red');
 
-  return <div style={{ color, scale: "1" }}>This text is styled with a reactive color.</div>;
+  return <div style={{ color, scale: '1' }}>This text is styled with a reactive color.</div>;
 }
 
 function NestedChildArrayExample() {
@@ -191,7 +180,7 @@ class _ClassTest {
   }
 
   foo = 1;
-  bar = "abc";
+  bar = 'abc';
   element = (
     <div>
       {this.foo} - {this.bar}

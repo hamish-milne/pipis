@@ -2,8 +2,8 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
-import "./styles.css";
-import { reactive, select, List } from "../pipis";
+import './styles.css';
+import { reactive, select, List } from '../pipis';
 
 type Todo = { id: number; text: string; done: boolean };
 
@@ -11,13 +11,13 @@ let nextId = 0;
 
 export function TodoApp() {
   const todos = reactive<readonly Todo[]>([]);
-  const draft = reactive("");
+  const draft = reactive('');
 
   function addTodo() {
     const text = draft.value.trim();
     if (!text) return;
     todos.value = [...todos.value, { id: nextId++, text, done: false }];
-    draft.value = "";
+    draft.value = '';
   }
 
   function removeTodo(id: number) {
@@ -25,9 +25,7 @@ export function TodoApp() {
   }
 
   function toggleTodo(id: number) {
-    todos.value = todos.value.map((todo) =>
-      todo.id === id ? { ...todo, done: !todo.done } : todo,
-    );
+    todos.value = todos.value.map((todo) => (todo.id === id ? { ...todo, done: !todo.done } : todo));
   }
 
   function moveTodo(id: number, delta: number) {
@@ -47,8 +45,8 @@ export function TodoApp() {
   // Each row derives its own reactive fields by id, so it only updates when its own data changes.
   function todoRow(id: number) {
     const todo = select(todos, (list) => list.find((t) => t.id === id)!);
-    const text = select(todo, "text");
-    const done = select(todo, "done");
+    const text = select(todo, 'text');
+    const done = select(todo, 'done');
 
     return (
       <li className="group flex items-center gap-3 px-5 py-3 transition hover:bg-white/5">
@@ -131,9 +129,7 @@ export function TodoApp() {
             {(todo) => todoRow(todo.id)}
           </List>
         </ul>
-        <p className="hidden px-6 py-12 text-center text-sm text-slate-500 peer-empty:block">
-          Nothing to do — enjoy the silence.
-        </p>
+        <p className="hidden px-6 py-12 text-center text-sm text-slate-500 peer-empty:block">Nothing to do — enjoy the silence.</p>
 
         <div className="flex items-center justify-between border-t border-white/5 px-6 py-3 text-xs text-slate-500">
           <span>Use the arrows to reorder items.</span>

@@ -1,11 +1,9 @@
-import { type Reactive, REACTIVE } from "./core";
+import { type Reactive, REACTIVE } from './core';
 
 /**
  * Adapts an object with a `subscribe` method to be recognized as a reactive object by setting the `[REACTIVE]` property.
  */
-export function adapt<T extends { subscribe: (callback: (newValue: any) => void) => () => void }>(
-  obj: T,
-): T & { [REACTIVE]: true } {
+export function adapt<T extends { subscribe: (callback: (newValue: any) => void) => () => void }>(obj: T): T & { [REACTIVE]: true } {
   return Object.assign(obj, { [REACTIVE]: true as const });
 }
 
@@ -70,7 +68,7 @@ export type DeepPartial<T> = T extends object
   : T;
 
 function isMergeable(value: unknown): value is object {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function mergeDeep<T>(target: T, source: DeepPartial<T>): T {
@@ -78,10 +76,7 @@ function mergeDeep<T>(target: T, source: DeepPartial<T>): T {
     const result: T = { ...target };
     for (const key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
-        result[key as keyof T] = mergeDeep(
-          target[key as keyof T],
-          source[key as keyof typeof source] as DeepPartial<T[keyof T]>,
-        );
+        result[key as keyof T] = mergeDeep(target[key as keyof T], source[key as keyof typeof source] as DeepPartial<T[keyof T]>);
       }
     }
     return result;
@@ -120,24 +115,12 @@ class ReactiveSelect<TIn, TOut> implements Reactive<TOut> {
 }
 
 /** Derives a read-only reactive value from `input` by applying `compute`, only notifying subscribers when the result actually changes. */
-export function select<TIn, TOut>(
-  input: Reactive<TIn>,
-  compute: (input: TIn) => TOut,
-): Reactive<TOut>;
+export function select<TIn, TOut>(input: Reactive<TIn>, compute: (input: TIn) => TOut): Reactive<TOut>;
 /** Derives a read-only reactive value by selecting a single property key out of `input`. */
-export function select<TIn, TKey extends keyof TIn>(
-  input: Reactive<TIn>,
-  key: TKey,
-): Reactive<TIn[TKey]>;
+export function select<TIn, TKey extends keyof TIn>(input: Reactive<TIn>, key: TKey): Reactive<TIn[TKey]>;
 
-export function select<TIn, TOut>(
-  input: Reactive<TIn>,
-  compute: ((input: TIn) => TOut) | keyof TIn,
-): Reactive<TOut> {
-  return new ReactiveSelect(
-    input,
-    typeof compute === "function" ? compute : (input: TIn) => input[compute] as TOut,
-  );
+export function select<TIn, TOut>(input: Reactive<TIn>, compute: ((input: TIn) => TOut) | keyof TIn): Reactive<TOut> {
+  return new ReactiveSelect(input, typeof compute === 'function' ? compute : (input: TIn) => input[compute] as TOut);
 }
 
 class ReactiveConstant<T> implements Reactive<T> {
@@ -185,10 +168,7 @@ export const [withErrorHandler, getErrorHandler] = defineContext<ErrorHandler>(c
 type AnyFunction = (...args: any[]) => any;
 type AddReturnType<F extends AnyFunction, R> = (...args: Parameters<F>) => ReturnType<F> | R;
 
-export function handleError<T extends AnyFunction>(
-  fn: T,
-  err?: undefined,
-): AddReturnType<T, undefined>;
+export function handleError<T extends AnyFunction>(fn: T, err?: undefined): AddReturnType<T, undefined>;
 export function handleError<T extends AnyFunction, TErr>(fn: T, err: TErr): AddReturnType<T, TErr>;
 
 export function handleError<T extends AnyFunction, TErr>(fn: T, err: TErr): AddReturnType<T, TErr> {
@@ -202,9 +182,6 @@ export function handleError<T extends AnyFunction, TErr>(fn: T, err: TErr): AddR
   };
 }
 
-export function subscribeWithCatch<T>(
-  reactive: Reactive<T>,
-  callback: (newValue: T) => void,
-): () => void {
+export function subscribeWithCatch<T>(reactive: Reactive<T>, callback: (newValue: T) => void): () => void {
   return reactive.subscribe(handleError(callback));
 }

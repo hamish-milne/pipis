@@ -11,15 +11,8 @@ import {
   type JSXParent,
   type JSXSibling,
   type ChildrenProp,
-} from "./core";
-import {
-  handleError,
-  reactive,
-  select,
-  subscribeWithCatch,
-  withErrorHandler,
-  type ReactiveReadonly,
-} from "./reactive";
+} from './core';
+import { handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive';
 
 type MountFn = (parent: Exclude<JSXParent, undefined>, sibling: JSXSibling) => Cleanup | void;
 /**
@@ -149,13 +142,7 @@ export function If({
  * Prefer {@link OneOf}, {@link List}, or {@link Repeat} where they fit; those update in place
  * instead of throwing away and rebuilding the DOM on every change.
  */
-export function Dynamic<T>({
-  value,
-  children,
-}: {
-  value: Reactive<T>;
-  children: (props: T) => JSXElement;
-}): JSXElement {
+export function Dynamic<T>({ value, children }: { value: Reactive<T>; children: (props: T) => JSXElement }): JSXElement {
   let current: JSXElement | undefined;
   const Dynamic_mount: MountFn = (parent, sibling) =>
     subscribeWithCatch(value, function Dynamic_value(newValue) {
@@ -187,17 +174,10 @@ export function effect(fn: () => Cleanup | undefined): JSXElement {
 }
 
 /** JSX-friendly wrapper around {@link effect}, for running a side effect on mount/unmount. */
-export const Effect = (props: { children: () => Cleanup | undefined }): JSXElement =>
-  effect(props.children);
+export const Effect = (props: { children: () => Cleanup | undefined }): JSXElement => effect(props.children);
 
 /** Runs `children` with the current value on mount, and again on every subsequent change. */
-export function Watch<T>({
-  value,
-  children,
-}: {
-  value: Reactive<T>;
-  children: (newValue: T) => void;
-}): JSXElement {
+export function Watch<T>({ value, children }: { value: Reactive<T>; children: (newValue: T) => void }): JSXElement {
   const Watch_effect = () =>
     subscribeWithCatch(value, function Watch_value(newValue) {
       children(newValue);
@@ -253,11 +233,7 @@ export function Suspense<T>({
           }),
       OneOf({
         selector: state,
-        children: [
-          loading ?? successElement,
-          successElement,
-          error?.(errorValue) ?? successElement,
-        ],
+        children: [loading ?? successElement, successElement, error?.(errorValue) ?? successElement],
       }),
     ],
   });

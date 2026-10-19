@@ -2,34 +2,26 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
-import "../samples/styles.css";
-import { reactive, select, Effect, Watch, type JSXElement, type Reactive } from "../pipis";
-import { Markdown, renderToken, renderTokens, type MarkdownRenderer } from "../pipis/markdown";
-import { HighlightJS } from "../pipis/highlight";
+import '../samples/styles.css';
+import { reactive, select, Effect, Watch, type JSXElement, type Reactive } from '../pipis';
+import { Markdown, renderToken, renderTokens, type MarkdownRenderer } from '../pipis/markdown';
+import { HighlightJS } from '../pipis/highlight';
 
-import introduction from "./01-introduction.md?raw";
-import gettingStarted from "./02-getting-started.md?raw";
-import reactiveValues from "./03-reactive-values.md?raw";
-import dynamicUi from "./04-dynamic-ui.md?raw";
-import comparisonWithReact from "./05-comparison-with-react.md?raw";
-import utilities from "./06-utilities.md?raw";
-import patternsAndPitfalls from "./07-patterns-and-pitfalls.md?raw";
+import introduction from './01-introduction.md?raw';
+import gettingStarted from './02-getting-started.md?raw';
+import reactiveValues from './03-reactive-values.md?raw';
+import dynamicUi from './04-dynamic-ui.md?raw';
+import comparisonWithReact from './05-comparison-with-react.md?raw';
+import utilities from './06-utilities.md?raw';
+import patternsAndPitfalls from './07-patterns-and-pitfalls.md?raw';
 
-const content = [
-  introduction,
-  gettingStarted,
-  reactiveValues,
-  dynamicUi,
-  comparisonWithReact,
-  utilities,
-  patternsAndPitfalls,
-].join("\n\n");
+const content = [introduction, gettingStarted, reactiveValues, dynamicUi, comparisonWithReact, utilities, patternsAndPitfalls].join('\n\n');
 
 function slugify(text: string) {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 type TocNode = { slug: string; label: string; depth: number; children: TocNode[] };
@@ -46,9 +38,7 @@ function renderToc(nodes: TocNode[], activeSlug: Reactive<string | undefined>): 
           >
             {node.label}
           </a>
-          {node.children.length > 0 && (
-            <div className="pl-3">{renderToc(node.children, activeSlug)}</div>
-          )}
+          {node.children.length > 0 && <div className="pl-3">{renderToc(node.children, activeSlug)}</div>}
         </li>
       ))}
     </ul>
@@ -56,13 +46,13 @@ function renderToc(nodes: TocNode[], activeSlug: Reactive<string | undefined>): 
 }
 
 export function Docs() {
-  const theme = reactive<"light" | "dark">(
-    (localStorage.getItem("docs-theme") as "light" | "dark" | null) ??
-      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
+  const theme = reactive<'light' | 'dark'>(
+    (localStorage.getItem('docs-theme') as 'light' | 'dark' | null) ??
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
   );
 
   function toggleTheme() {
-    theme.value = theme.value === "dark" ? "light" : "dark";
+    theme.value = theme.value === 'dark' ? 'light' : 'dark';
   }
 
   // Assigns each heading a stable, unique anchor id, de-duplicating repeated titles.
@@ -125,23 +115,19 @@ export function Docs() {
     blockInfo.set(el, { slug: currentHeadingSlug, index: blockCount++ });
     // Only count a block as "active" while it's within the top 30% of the viewport.
     // The top offset is to account for the fixed header height.
-    observer ??= new IntersectionObserver(onIntersect, { rootMargin: "-70px 0px -70% 0px" });
+    observer ??= new IntersectionObserver(onIntersect, { rootMargin: '-70px 0px -70% 0px' });
     observer.observe(el);
   }
 
   const docsRenderer: MarkdownRenderer = (token) => {
     switch (token.type) {
-      case "heading": {
-        const label = token.text.replace(/[`*_]/g, "");
+      case 'heading': {
+        const label = token.text.replace(/[`*_]/g, '');
         const slug = headingSlug(label);
         addTocEntry(token.depth, slug, label);
         currentHeadingSlug = slug;
         return token.depth === 3 ? (
-          <h3
-            id={slug}
-            ref={trackBlock}
-            className="mt-8 scroll-mt-24 text-lg font-semibold text-slate-800 dark:text-slate-100"
-          >
+          <h3 id={slug} ref={trackBlock} className="mt-8 scroll-mt-24 text-lg font-semibold text-slate-800 dark:text-slate-100">
             {renderTokens(token, docsRenderer)}
           </h3>
         ) : (
@@ -154,16 +140,13 @@ export function Docs() {
           </h2>
         );
       }
-      case "paragraph":
+      case 'paragraph':
         return (
-          <p
-            ref={trackBlock}
-            className="mb-4 text-[15px] leading-7 text-slate-600 dark:text-slate-300"
-          >
+          <p ref={trackBlock} className="mb-4 text-[15px] leading-7 text-slate-600 dark:text-slate-300">
             {renderTokens(token, docsRenderer)}
           </p>
         );
-      case "list": {
+      case 'list': {
         const items = renderTokens({ tokens: token.items }, docsRenderer);
         return token.ordered ? (
           <ol
@@ -181,19 +164,15 @@ export function Docs() {
           </ul>
         );
       }
-      case "strong":
-        return (
-          <strong className="font-semibold text-slate-900 dark:text-white">
-            {renderTokens(token, docsRenderer)}
-          </strong>
-        );
-      case "codespan":
+      case 'strong':
+        return <strong className="font-semibold text-slate-900 dark:text-white">{renderTokens(token, docsRenderer)}</strong>;
+      case 'codespan':
         return (
           <code className="rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[13px] text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-300">
             {token.text}
           </code>
         );
-      case "link":
+      case 'link':
         return (
           <a
             href={token.href}
@@ -203,18 +182,11 @@ export function Docs() {
             {renderTokens(token, docsRenderer)}
           </a>
         );
-      case "code":
+      case 'code':
         return (
           // Always dark, regardless of site theme, to match the (dark-only) highlight.js theme.
-          <div
-            ref={trackBlock}
-            className="mb-4 overflow-hidden rounded-xl bg-slate-900 ring-1 ring-white/10 scheme-dark"
-          >
-            {token.lang && (
-              <div className="border-b border-white/10 px-4 py-1.5 font-mono text-xs text-slate-400">
-                {token.lang}
-              </div>
-            )}
+          <div ref={trackBlock} className="mb-4 overflow-hidden rounded-xl bg-slate-900 ring-1 ring-white/10 scheme-dark">
+            {token.lang && <div className="border-b border-white/10 px-4 py-1.5 font-mono text-xs text-slate-400">{token.lang}</div>}
             <pre className="overflow-x-auto p-4 text-[13px] leading-6">
               <HighlightJS language={token.lang}>{token.text}</HighlightJS>
             </pre>
@@ -234,7 +206,7 @@ export function Docs() {
       className="min-h-screen bg-slate-50 text-slate-900 antialiased transition-colors dark:bg-slate-950 dark:text-slate-100 dark:scheme-dark"
       data-theme={theme}
     >
-      <Watch value={theme}>{(value) => localStorage.setItem("docs-theme", value)}</Watch>
+      <Watch value={theme}>{(value) => localStorage.setItem('docs-theme', value)}</Watch>
       <Effect>{() => () => observer?.disconnect()}</Effect>
 
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50/80 backdrop-blur dark:border-white/10 dark:bg-slate-950/80">
@@ -257,12 +229,8 @@ export function Docs() {
 
       <div className="mx-auto flex max-w-5xl items-start gap-10 px-4 py-10">
         <aside className="sticky top-20 hidden h-fit w-56 shrink-0 sm:block">
-          <h2 className="px-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            On this page
-          </h2>
-          <nav className="mt-2 flex flex-col border-l border-slate-200 dark:border-white/10">
-            {toc}
-          </nav>
+          <h2 className="px-2.5 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">On this page</h2>
+          <nav className="mt-2 flex flex-col border-l border-slate-200 dark:border-white/10">{toc}</nav>
         </aside>
 
         <main className="min-w-0 flex-1 rounded-2xl bg-white p-8 shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 dark:bg-slate-900 dark:shadow-black/20 dark:ring-white/10 sm:p-10">

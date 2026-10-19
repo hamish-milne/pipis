@@ -1,38 +1,22 @@
 /// <reference lib="es2019" />
 /// <reference types="node" />
-import { build } from "rolldown";
-import path from "node:path";
-import process from "node:process";
-import zlib from "node:zlib";
+import { build } from 'rolldown';
+import path from 'node:path';
+import process from 'node:process';
+import zlib from 'node:zlib';
 
 const modules: [string, string[]][] = [
-  ["core", ["createElement", "textNode"]],
-  ["reactive", ["reactive", "select", "constant", "subscribeWithCatch"]],
-  [
-    "dynamic",
-    [
-      "List",
-      "OneOf",
-      "If",
-      "Effect",
-      "Watch",
-      "Suspense",
-      "ErrorBoundary",
-      "Portal",
-      "PortalTarget",
-      "Helmet",
-    ],
-  ],
+  ['core', ['createElement', 'textNode']],
+  ['reactive', ['reactive', 'select', 'constant', 'subscribeWithCatch']],
+  ['dynamic', ['List', 'OneOf', 'If', 'Effect', 'Watch', 'Suspense', 'ErrorBoundary', 'Portal', 'PortalTarget', 'Helmet']],
 ];
 
 function buildEntryPoint(moduleExports: [string, string[]][]) {
   const importStatements = moduleExports.map(
-    ([moduleName, exports]) => `import { ${exports.join(", ")} } from "../pipis/${moduleName}.ts";`,
+    ([moduleName, exports]) => `import { ${exports.join(', ')} } from "../pipis/${moduleName}.ts";`,
   );
-  const exportArray = `export const $ = [${moduleExports
-    .flatMap(([, exports]) => exports)
-    .join(", ")}]`;
-  return [...importStatements, exportArray].join("\n");
+  const exportArray = `export const $ = [${moduleExports.flatMap(([, exports]) => exports).join(', ')}]`;
+  return [...importStatements, exportArray].join('\n');
 }
 
 for (let i = 0; i < modules.length; i++) {
@@ -42,16 +26,16 @@ for (let i = 0; i < modules.length; i++) {
   const minifiedBundle = await build({
     input: `data:text/javascript,${encodeURIComponent(entryPoint)}`,
     output: {
-      format: "esm",
+      format: 'esm',
       minify: true,
     },
     plugins: [
       {
-        name: "resolve-data-url-imports",
+        name: 'resolve-data-url-imports',
         resolveId(source, importer) {
           // Check if the current file being imported is coming from a data URL
           // AND check if the source path is relative (starts with ./ or ../)
-          if (importer && importer.startsWith("\0rolldown/data-url:") && source.startsWith(".")) {
+          if (importer && importer.startsWith('\0rolldown/data-url:') && source.startsWith('.')) {
             // Re-route the relative import directly from your chosen real folder path
             const resolvedPath = path.resolve(process.cwd(), source);
             return resolvedPath;

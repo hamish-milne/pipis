@@ -2,7 +2,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
-import "./styles.css";
+import './styles.css';
 import {
   reactive,
   select,
@@ -17,18 +17,15 @@ import {
   type JSXElement,
   Effect,
   Helmet,
-} from "../pipis";
+} from '../pipis';
 
-const [withAccent, getAccent] = defineContext("text-green-400");
+const [withAccent, getAccent] = defineContext('text-green-400');
 
 function starRating(rating: ReactiveState<number>) {
   const accent = getAccent();
   const star = (index: number) => {
     const filled = select(rating, (value) => index < value);
-    const starClass = select(
-      filled,
-      (isFilled) => `text-2xl leading-none transition ${isFilled ? accent : "text-slate-600"}`,
-    );
+    const starClass = select(filled, (isFilled) => `text-2xl leading-none transition ${isFilled ? accent : 'text-slate-600'}`);
     return (
       <button type="button" onclick={() => (rating.value = index + 1)} className={starClass}>
         ★
@@ -43,7 +40,7 @@ function starRating(rating: ReactiveState<number>) {
 // A hand-written JSXElement: throws as soon as it's actually mounted (not merely constructed).
 const crashyElement: JSXElement = (parent) => {
   if (parent) {
-    throw new Error("Simulated render crash");
+    throw new Error('Simulated render crash');
   }
   return null;
 };
@@ -54,11 +51,7 @@ const crashyElement: JSXElement = (parent) => {
 // ErrorBoundary itself mounts - not through a reactive update it can't see past.
 function crashTestPanel(crash: boolean) {
   return (
-    <ErrorBoundary
-      fallback={(error) => (
-        <p className="text-sm text-rose-400">Caught a crash: {select(error, String)}</p>
-      )}
-    >
+    <ErrorBoundary fallback={(error) => <p className="text-sm text-rose-400">Caught a crash: {select(error, String)}</p>}>
       <p className="text-sm text-slate-400">This panel is healthy.</p>
       {crash && crashyElement}
     </ErrorBoundary>
@@ -68,7 +61,7 @@ function crashTestPanel(crash: boolean) {
 export function FeedbackApp() {
   const portalTarget = reactive<PortalTargetValue>();
   const rating = reactive(0);
-  const comment = reactive("");
+  const comment = reactive('');
   const modalOpen = reactive(false);
   const crashTest = reactive(false);
   const commentBox = reactive<HTMLTextAreaElement>();
@@ -76,7 +69,7 @@ export function FeedbackApp() {
   function submitFeedback() {
     modalOpen.value = false;
     rating.value = 0;
-    comment.value = "";
+    comment.value = '';
   }
 
   return (
@@ -90,7 +83,7 @@ export function FeedbackApp() {
       <div className="mx-auto flex max-w-md flex-col gap-6">
         <div className="rounded-2xl bg-slate-900/70 p-6 ring-1 ring-white/10">
           <h1 className="text-lg font-semibold">How was your experience?</h1>
-          <div className="mt-3">{withAccent("text-amber-400", () => starRating(rating))}</div>
+          <div className="mt-3">{withAccent('text-amber-400', () => starRating(rating))}</div>
           <button
             onclick={() => (modalOpen.value = true)}
             className="mt-4 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-400"
@@ -105,7 +98,7 @@ export function FeedbackApp() {
             onclick={() => (crashTest.value = !crashTest.value)}
             className="mt-3 rounded-lg bg-slate-800 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-700"
           >
-            {select(crashTest, (c) => (c ? "Reset panel" : "Trigger crash"))}
+            {select(crashTest, (c) => (c ? 'Reset panel' : 'Trigger crash'))}
           </button>
           <div className="mt-3">
             <Dynamic value={crashTest}>{crashTestPanel}</Dynamic>

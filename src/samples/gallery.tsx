@@ -2,19 +2,16 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
-import "./styles.css";
-import { reactive, select, Dynamic, type JSXElement } from "../pipis";
-import { TodoApp } from "./todo";
-import { WeatherApp } from "./weather";
-import { FeedbackApp } from "./feedback";
+import './styles.css';
+import { reactive, select, Dynamic, type JSXElement } from '../pipis';
+import { TodoApp } from './todo';
+import { WeatherApp } from './weather';
+import { FeedbackApp } from './feedback';
 
 /** An `<a>` pointing at an API's (not yet written) docs entry, used inline within descriptions. */
 function api(name: string): JSXElement {
   return (
-    <a
-      href=""
-      className="font-medium text-indigo-300 underline decoration-dotted hover:text-indigo-200"
-    >
+    <a href="" className="font-medium text-indigo-300 underline decoration-dotted hover:text-indigo-200">
       {name}
     </a>
   );
@@ -29,42 +26,38 @@ type Example = {
 
 const examples: Example[] = [
   {
-    id: "todo",
-    label: "Todo",
+    id: 'todo',
+    label: 'Todo',
     component: TodoApp,
     description: (
       <p>
-        A classic todo list. Demonstrates {api("reactive")} state holding an array, {api("select")}{" "}
-        to derive per-row fields (so a row only updates when its own data changes, not when
-        unrelated items change), and {api("List")} for keyed, reorderable rendering.
+        A classic todo list. Demonstrates {api('reactive')} state holding an array, {api('select')} to derive per-row fields (so a row only
+        updates when its own data changes, not when unrelated items change), and {api('List')} for keyed, reorderable rendering.
       </p>
     ),
   },
   {
-    id: "weather",
-    label: "Weather",
+    id: 'weather',
+    label: 'Weather',
     component: WeatherApp,
     description: (
       <p>
-        Fetches the local weather on load. Demonstrates {api("Suspense")} for pending/success/error
-        states around a promise, {api("Watch")} for persisting a preference to storage as a side
-        effect, and reactive {api("data-*")} attribute bindings driving Tailwind variants for the
-        theme toggle.
+        Fetches the local weather on load. Demonstrates {api('Suspense')} for pending/success/error states around a promise, {api('Watch')}{' '}
+        for persisting a preference to storage as a side effect, and reactive {api('data-*')} attribute bindings driving Tailwind variants
+        for the theme toggle.
       </p>
     ),
   },
   {
-    id: "feedback",
-    label: "Feedback",
+    id: 'feedback',
+    label: 'Feedback',
     component: FeedbackApp,
     description: (
       <p>
-        A feedback widget built to exercise the remaining API surface. Demonstrates array operations
-        for a fixed-length star rating, {api("defineContext")} for passing an accent color down the
-        tree, {api("PortalTarget")} and {api("Portal")} for rendering a modal elsewhere in the DOM,{" "}
-        {api("If")} for conditionally showing that modal, a directly-passed reactive {api("ref")} to
-        capture a DOM node, and {api("ErrorBoundary")} combined with {api("Dynamic")} to catch a
-        crash on mount.
+        A feedback widget built to exercise the remaining API surface. Demonstrates array operations for a fixed-length star rating,{' '}
+        {api('defineContext')} for passing an accent color down the tree, {api('PortalTarget')} and {api('Portal')} for rendering a modal
+        elsewhere in the DOM, {api('If')} for conditionally showing that modal, a directly-passed reactive {api('ref')} to capture a DOM
+        node, and {api('ErrorBoundary')} combined with {api('Dynamic')} to catch a crash on mount.
       </p>
     ),
   },
@@ -86,9 +79,7 @@ export function Gallery() {
                 isSelected,
                 (active) =>
                   `rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    active
-                      ? "bg-indigo-500 text-white"
-                      : "bg-slate-900 text-slate-300 hover:bg-slate-800"
+                    active ? 'bg-indigo-500 text-white' : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
                   }`,
               );
               return (

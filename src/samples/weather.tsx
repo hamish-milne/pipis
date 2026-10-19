@@ -2,8 +2,8 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource ../pipis */
 
-import "./styles.css";
-import { reactive, select, Suspense, Watch, type ReactiveReadonly } from "../pipis";
+import './styles.css';
+import { reactive, select, Suspense, Watch, type ReactiveReadonly } from '../pipis';
 
 type WeatherData = {
   temperature: number;
@@ -12,35 +12,33 @@ type WeatherData = {
 };
 
 const WEATHER_CODES: Record<number, { emoji: string; label: string }> = {
-  0: { emoji: "☀️", label: "Clear sky" },
-  1: { emoji: "🌤️", label: "Mostly clear" },
-  2: { emoji: "⛅", label: "Partly cloudy" },
-  3: { emoji: "☁️", label: "Overcast" },
-  45: { emoji: "🌫️", label: "Fog" },
-  48: { emoji: "🌫️", label: "Freezing fog" },
-  51: { emoji: "🌦️", label: "Light drizzle" },
-  53: { emoji: "🌦️", label: "Drizzle" },
-  55: { emoji: "🌦️", label: "Dense drizzle" },
-  61: { emoji: "🌧️", label: "Light rain" },
-  63: { emoji: "🌧️", label: "Rain" },
-  65: { emoji: "🌧️", label: "Heavy rain" },
-  71: { emoji: "🌨️", label: "Light snow" },
-  73: { emoji: "🌨️", label: "Snow" },
-  75: { emoji: "🌨️", label: "Heavy snow" },
-  80: { emoji: "🌦️", label: "Rain showers" },
-  81: { emoji: "🌦️", label: "Heavy showers" },
-  82: { emoji: "⛈️", label: "Violent showers" },
-  95: { emoji: "⛈️", label: "Thunderstorm" },
+  0: { emoji: '☀️', label: 'Clear sky' },
+  1: { emoji: '🌤️', label: 'Mostly clear' },
+  2: { emoji: '⛅', label: 'Partly cloudy' },
+  3: { emoji: '☁️', label: 'Overcast' },
+  45: { emoji: '🌫️', label: 'Fog' },
+  48: { emoji: '🌫️', label: 'Freezing fog' },
+  51: { emoji: '🌦️', label: 'Light drizzle' },
+  53: { emoji: '🌦️', label: 'Drizzle' },
+  55: { emoji: '🌦️', label: 'Dense drizzle' },
+  61: { emoji: '🌧️', label: 'Light rain' },
+  63: { emoji: '🌧️', label: 'Rain' },
+  65: { emoji: '🌧️', label: 'Heavy rain' },
+  71: { emoji: '🌨️', label: 'Light snow' },
+  73: { emoji: '🌨️', label: 'Snow' },
+  75: { emoji: '🌨️', label: 'Heavy snow' },
+  80: { emoji: '🌦️', label: 'Rain showers' },
+  81: { emoji: '🌦️', label: 'Heavy showers' },
+  82: { emoji: '⛈️', label: 'Violent showers' },
+  95: { emoji: '⛈️', label: 'Thunderstorm' },
 };
 
 function describeWeather(code: number) {
-  return WEATHER_CODES[code] ?? { emoji: "❓", label: "Unknown" };
+  return WEATHER_CODES[code] ?? { emoji: '❓', label: 'Unknown' };
 }
 
 function locate(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) =>
-    navigator.geolocation.getCurrentPosition(resolve, reject),
-  );
+  return new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject));
 }
 
 async function fetchWeather(): Promise<WeatherData> {
@@ -59,13 +57,13 @@ async function fetchWeather(): Promise<WeatherData> {
 }
 
 export function WeatherApp() {
-  const theme = reactive<"light" | "dark">(
-    (localStorage.getItem("weather-theme") as "light" | "dark" | null) ??
-      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
+  const theme = reactive<'light' | 'dark'>(
+    (localStorage.getItem('weather-theme') as 'light' | 'dark' | null) ??
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
   );
 
   function toggleTheme() {
-    theme.value = theme.value === "dark" ? "light" : "dark";
+    theme.value = theme.value === 'dark' ? 'light' : 'dark';
   }
 
   function weatherCard(weather: ReactiveReadonly<WeatherData>) {
@@ -75,10 +73,10 @@ export function WeatherApp() {
 
     return (
       <div className="flex flex-col items-center gap-1 py-4 text-center">
-        <span className="text-6xl">{select(info, "emoji")}</span>
+        <span className="text-6xl">{select(info, 'emoji')}</span>
         <span className="text-4xl font-semibold tabular-nums">{temperature}°C</span>
         <span className="text-sm text-slate-500 dark:text-slate-400" data-theme={theme}>
-          {select(info, "label")}
+          {select(info, 'label')}
         </span>
         <span className="mt-2 text-xs text-slate-400 dark:text-slate-500" data-theme={theme}>
           Wind {windSpeed} km/h
@@ -102,10 +100,10 @@ export function WeatherApp() {
   function errorCard(error: ReactiveReadonly<unknown>) {
     const message = select(error, (err) =>
       err instanceof GeolocationPositionError
-        ? "Location access was denied - enable it to see the weather."
+        ? 'Location access was denied - enable it to see the weather.'
         : err instanceof Error
           ? err.message
-          : "Something went wrong.",
+          : 'Something went wrong.',
     );
     return <p className="py-10 text-center text-sm text-rose-500">{message}</p>;
   }
@@ -115,7 +113,7 @@ export function WeatherApp() {
       data-theme={theme}
       className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-16 text-slate-900 transition-colors dark:bg-slate-950 dark:text-slate-100"
     >
-      <Watch value={theme}>{(value) => localStorage.setItem("weather-theme", value)}</Watch>
+      <Watch value={theme}>{(value) => localStorage.setItem('weather-theme', value)}</Watch>
 
       <div
         data-theme={theme}
@@ -139,12 +137,7 @@ export function WeatherApp() {
         </div>
 
         <div className="px-6 pb-6 pt-4">
-          <Suspense
-            promise={fetchWeather}
-            placeholder={{ code: 0, temperature: 0, windSpeed: 0 }}
-            success={weatherCard}
-            error={errorCard}
-          >
+          <Suspense promise={fetchWeather} placeholder={{ code: 0, temperature: 0, windSpeed: 0 }} success={weatherCard} error={errorCard}>
             <LoadingCard />
           </Suspense>
         </div>
