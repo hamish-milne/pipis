@@ -38,6 +38,7 @@
     "@types/node": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "chart.js": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-baseline-js": "catalog:",
     "highlight.js": "catalog:",

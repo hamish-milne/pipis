@@ -7,6 +7,7 @@ Step-by-step procedures for the chores that come round. Each says what to run an
 - [What's in the package](#whats-in-the-package)
 - [Release a new version](#release-a-new-version)
 - [One-time release setup](#one-time-release-setup)
+- [Regenerate the generated docs](#regenerate-the-generated-docs)
 - [Update dependencies](#update-dependencies)
 - [Update the GitHub Actions](#update-the-github-actions)
 - [Update the toolchain](#update-the-toolchain)
@@ -60,6 +61,17 @@ Done once per repository; keep as a checklist for a fork or a renamed package.
 - **npm:** the package exists (npm only lets you configure trusted publishing on a package that exists; `node tools/publish-placeholder.ts` publishes an empty placeholder for that, and can be deleted once it has been used). On the package's settings page add a **trusted publisher**: this GitHub repository, workflow `publish.yml`, environment `npm`, with `npm stage publish` allowed. There is no npm token anywhere; authentication is OIDC.
 - The maintainers who approve staged packages have 2FA on their npm accounts.
 - The repository is at its final address before the trusted publisher is configured: it is tied to the repository, so a move needs it done again.
+
+## Regenerate the generated docs
+
+`docs/reference/api.md` is generated from the library's declarations and doc comments. When an export, its signature or its doc comment changes, or one is added:
+
+```sh
+node tools/api.ts --out docs/reference/api.md   # regenerate the reference
+pnpm vp run docs                                # compiles and runs every example, and checks the reference is current
+```
+
+Do not edit the reference by hand. A new export must be placed in `STRUCTURE` in `tools/api.ts` (the generator names what is missing) and must have a doc comment whose first sentence stands alone. `PIPIS_DOCS_SHEET=1 pnpm vp run docs` also writes `out/docs-sheet.html` with every live example's markup on one page, for looking at.
 
 ## Update dependencies
 

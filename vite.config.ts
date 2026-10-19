@@ -73,6 +73,8 @@ export default defineConfig({
       test: { command: 'vp test run src/ --coverage', cache: false },
       // The import graph is held to its layers, so a feature cannot become a cost of everything.
       deps: { command: 'vp test run tools/deps.test.ts' },
+      // The documentation's code is compiled, every live example is run, links are followed, and the generated reference is current.
+      docs: { command: 'vp test run tools/docs.test.ts', cache: false },
       // The tarball a release publishes: built, installed into a clean project, type-checked there and run.
       'pack:test': { command: 'vp test run tools/pack.test.ts', cache: false },
       actions: { command: 'node tools/actions.ts check' },
@@ -83,7 +85,7 @@ export default defineConfig({
       all: {
         command: 'echo all green',
         cache: false,
-        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'deps', 'actions', 'size:check', 'pack:test', 'build'],
+        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'deps', 'docs', 'actions', 'size:check', 'pack:test', 'build'],
       },
     },
   },

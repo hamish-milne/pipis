@@ -569,3 +569,34 @@ export function Counter() {
 }
 
 Counter()(document.body);
+
+// ---- 7 API reference: the one-line examples, as LLM.md writes them ----
+
+declare const ClearButton: () => JSXElement;
+declare const X: () => JSXElement;
+declare const Y: () => JSXElement;
+declare const Risky: () => JSXElement;
+declare const query: ReactiveState<string>;
+
+type User = { name: string };
+
+export function apiReferenceExamples() {
+  const sel = reactive<'a' | 'b'>('a');
+  return [
+    <If condition={select(todos, (l) => l.length > 0)}>
+      <ClearButton />
+    </If>,
+    <OneOf selector={sel}>{{ a: <X />, b: <Y /> }}</OneOf>,
+    <Watch value={query}>
+      {(q) => {
+        document.title = q;
+      }}
+    </Watch>,
+    <Suspense promise={() => fetch('/api/user').then((r) => r.json() as Promise<User>)} emptyData={{ name: '' }}>
+      {(user) => <p>{select(user, 'name')}</p>}
+    </Suspense>,
+    <ErrorBoundary fallback={() => <p>Something broke</p>}>
+      <Risky />
+    </ErrorBoundary>,
+  ];
+}

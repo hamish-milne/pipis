@@ -1,6 +1,6 @@
 # Cookbook
 
-A collection of patterns and recipies for integrating other libraries with _pipis_.
+A collection of recipes for using other libraries with pipis: state libraries and Observables through `adapt`, and libraries that draw into an element.
 
 ## State libraries and Observables
 
@@ -14,7 +14,7 @@ The `adapt` call in each example below is run against the real library in `src/p
 
 ### Zustand
 
-```tsx
+```tsx check title="Zustand"
 import { createStore } from "zustand/vanilla";
 import { adapt, select } from "pipis";
 
@@ -26,7 +26,7 @@ const store = createStore<{ count: number; increment: () => void }>((set) => ({
 // Zustand's subscribe does not give the current state, so say how to read it.
 const count = select(adapt(store, () => store.getState()), "count");
 
-function App() {
+export function App() {
   return (
     <div>
       <p>Count: {count}</p>
@@ -38,7 +38,7 @@ function App() {
 
 ### Redux
 
-```tsx
+```tsx check title="Redux"
 import { legacy_createStore as createStore } from "redux";
 import { adapt, select } from "pipis";
 
@@ -49,7 +49,7 @@ const store = createStore((state: State = { count: 0 }, action: { type: "increme
 
 const count = select(adapt(store, () => store.getState()), "count");
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {count}</p>
@@ -63,7 +63,7 @@ function App() {
 
 An actor's `getSnapshot()` is its current value. Call it through a function, as it needs its `this`:
 
-```tsx
+```tsx check title="XState"
 import { assign, createActor, createMachine } from "xstate";
 import { adapt, select } from "pipis";
 
@@ -75,7 +75,7 @@ const actor = createActor(machine).start();
 
 const count = select(adapt(actor, () => actor.getSnapshot()), (snapshot) => snapshot.context.count);
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {count}</p>
@@ -89,14 +89,14 @@ function App() {
 
 A `BehaviorSubject` has a current value and gives it at once. A plain `Subject` or an `interval` has none until it emits, so it shows nothing (an empty text node) until then.
 
-```tsx
+```tsx check title="RxJS"
 import { BehaviorSubject, interval } from "rxjs";
 import { adapt } from "pipis";
 
 const myInterval = interval(1000);
 const myState = new BehaviorSubject(0);
 
-function App() {
+export function App() {
   return (
     <>
       <p>Time: {adapt(myInterval)}</p>
@@ -111,13 +111,13 @@ function App() {
 
 Any store from `svelte/store` (`writable`, `readable`, `derived`) works as it is:
 
-```tsx
+```tsx check title="Svelte stores"
 import { writable } from "svelte/store";
 import { adapt } from "pipis";
 
 const count = writable(0);
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {adapt(count)}</p>
@@ -129,13 +129,13 @@ function App() {
 
 ### Nanostores
 
-```tsx
+```tsx check title="Nanostores"
 import { atom } from "nanostores";
 import { adapt } from "pipis";
 
 const count = atom(0);
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {adapt(count)}</p>
@@ -147,13 +147,13 @@ function App() {
 
 ### Preact Signals
 
-```tsx
+```tsx check title="Preact Signals"
 import { signal } from "@preact/signals-core";
 import { adapt } from "pipis";
 
 const count = signal(0);
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {adapt(count)}</p>
@@ -167,7 +167,7 @@ function App() {
 
 Valtio's `subscribe` is a function that takes the proxy, so wrap it. Pass `true` for it to notify at once, as pipis does; by default it batches to a microtask.
 
-```tsx
+```tsx check title="Valtio"
 import { proxy, snapshot, subscribe } from "valtio/vanilla";
 import { adapt, select } from "pipis";
 
@@ -178,7 +178,7 @@ const count = select(
   "count",
 );
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {count}</p>
@@ -190,7 +190,7 @@ function App() {
 
 ### Jotai
 
-```tsx
+```tsx check title="Jotai"
 import { atom, createStore } from "jotai/vanilla";
 import { adapt } from "pipis";
 
@@ -199,7 +199,7 @@ const countAtom = atom(0);
 
 const count = adapt({ subscribe: (callback: () => void) => store.sub(countAtom, callback) }, () => store.get(countAtom));
 
-function App() {
+export function App() {
   return (
     <>
       <p>Count: {count}</p>
@@ -213,13 +213,20 @@ function App() {
 
 If a library has a way to read the current value and a way to be told when it changes, it fits the third recipe:
 
-```tsx
-adapt({ subscribe: (callback) => theLibrary.onChange(callback) }, () => theLibrary.read());
+```tsx check title="A library with a different shape"
+import { adapt } from "pipis";
+
+// A made-up library with a way to read a value and a way to be told it changed
+declare const theLibrary: { onChange(callback: () => void): () => void; read(): number };
+
+export const value = adapt({ subscribe: (callback: () => void) => theLibrary.onChange(callback) }, () => theLibrary.read());
 ```
 
-## HighlightJS
+## highlight.js
 
-```tsx
+A component that highlights the code it is given. The node is made once by pipis and highlighted in its `ref`; no other part of pipis needs to know about it.
+
+```tsx check title="HighlightJS"
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 
@@ -240,7 +247,9 @@ export function HighlightJS({ children, language }: { children: string; language
 
 ## Chart.js
 
-```tsx
+A component that draws a chart into a canvas and updates it when its reactive `data` and `options` change. The chart is made when the canvas is, and each `Watch` pushes the new value into it.
+
+```tsx check title="Chart.js"
 import {
   Chart,
   registerables,
@@ -262,7 +271,7 @@ export function ChartJS<TType extends ChartType>({
 }) {
   let chart!: Chart<TType>;
   function setCanvasRef(el: HTMLCanvasElement) {
-    chart = new Chart(el, { type });
+    chart = new Chart(el, { type, data: { datasets: [] } });
   }
 
   return (

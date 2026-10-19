@@ -187,7 +187,7 @@ export function If({
 
 /**
  * Renders content computed from a reactive value, fully recreating the DOM whenever it changes.
- * Prefer {@link OneOf}, {@link List}, or {@link Repeat} where they fit; those update in place
+ * Prefer {@link OneOf}, {@link List} or {@link ReactiveList} where they fit; those update in place
  * instead of throwing away and rebuilding the DOM on every change.
  */
 export function Dynamic<T>({ value, children }: { value: Reactive<T>; children: (props: T) => JSXElement }): JSXElement {

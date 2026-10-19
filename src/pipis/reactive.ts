@@ -13,6 +13,10 @@ type Unsubscribable = Cleanup | { unsubscribe(): void };
  * so the arguments the library passes to its listener do not matter.
  */
 export function adapt<T>(source: { subscribe(callback: (value: T) => void): Unsubscribable }): Reactive<T>;
+/**
+ * Like the form above, for a source whose `subscribe` does not give the current value (Zustand, Redux, XState): `current` reads it, and
+ * is called for the first value and again on every notification.
+ */
 export function adapt<T>(source: { subscribe(callback: () => void): Unsubscribable }, current: () => T): Reactive<T>;
 
 export function adapt<T>(
@@ -82,12 +86,14 @@ class ReactiveStateImpl<T> implements ReactiveState<T> {
 
 /** Creates a simple, independently-writable {@link ReactiveState} value. */
 export function reactive<T>(initialValue: T): ReactiveState<T>;
+/** Creates a {@link ReactiveState} with no value yet, which is `undefined` until it is assigned. */
 export function reactive<T>(initialValue?: T): ReactiveState<T | undefined>;
 
 export function reactive<T>(initialValue: T): ReactiveState<T> {
   return new ReactiveStateImpl(initialValue);
 }
 
+/** `T` with every key optional, to any depth: what {@link patch} accepts. Arrays are not made partial: a patch replaces them whole. */
 export type DeepPartial<T> = T extends object
   ? T extends (infer _)[]
     ? T
@@ -114,6 +120,10 @@ function mergeDeep(target: unknown, source: unknown): unknown {
   return source;
 }
 
+/**
+ * Updates object state without spreading: merges `partial` into the current value, key by key and to any depth, and assigns the result as
+ * a new object. Only plain objects are merged; an array, a `Date`, a `Map` or a class instance in `partial` replaces what was there.
+ */
 export function patch<T>(state: ReactiveState<T>, partial: DeepPartial<T>): void {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- the merge only replaces keys that `partial` names, with values of the type those keys have in `T`, so the result is a `T`
   state.value = mergeDeep(state.value, partial) as T;
@@ -177,7 +187,9 @@ class ReactiveConstant<T> implements Reactive<T> {
 }
 
 /** Wraps a static value as a {@link ReactiveReadonly}, for APIs that require a reactive input. */
-export const constant = <T>(value: T): ReactiveReadonly<T> => new ReactiveConstant(value); /**
+export const constant = <T>(value: T): ReactiveReadonly<T> => new ReactiveConstant(value);
+
+/**
  * Creates a context: a `[provider, consumer]` pair for passing a value down the component tree
  * without threading it through every level of props. The consumer resolves to the nearest
  * enclosing provider's value at the time the component is constructed.
@@ -197,14 +209,29 @@ export function defineContext<T>(defaultValue: T) {
   const context_consumer = () => current;
   return [context_provider, context_consumer] as const;
 }
+/** A function that is told about an error that was thrown where nothing could catch it: by a subscriber, an effect, or a child as it mounted. */
 export type ErrorHandler = (error: unknown) => void;
 
-export const [withErrorHandler, getErrorHandler] = defineContext<ErrorHandler>(console.error);
+const errorContext = defineContext<ErrorHandler>(console.error);
 
+/**
+ * Runs `inner` with `handler` as the error handler: every subscription made while it runs reports its errors to `handler`, for as long as
+ * it lives. This is how `ErrorBoundary` works, and the default handler is `console.error`.
+ */
+export const withErrorHandler = errorContext[0];
+
+/** The error handler that is current: the nearest one provided by {@link withErrorHandler}, or `console.error`. */
+export const getErrorHandler = errorContext[1];
+
+/**
+ * Wraps `fn` so that an error it throws is given to the error handler that is current now (see {@link withErrorHandler}), and the wrapper
+ * returns `undefined` instead of throwing.
+ */
 export function handleError<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => TResult,
   err?: undefined,
 ): (...args: TArgs) => TResult | undefined;
+/** Like the form above, but the wrapper returns `err` when `fn` throws. */
 export function handleError<TArgs extends unknown[], TResult, TErr>(
   fn: (...args: TArgs) => TResult,
   err: TErr,
@@ -227,6 +254,10 @@ export function handleError<TArgs extends unknown[], TResult, TErr>(
   };
 }
 
+/**
+ * Subscribes `callback` to `reactive`, with an error it throws given to the error handler that is current now (see {@link handleError})
+ * rather than thrown at whoever wrote to the value. Returns the cleanup. Every subscription the library makes on your behalf works this way.
+ */
 export function subscribeWithCatch<T>(reactive: Reactive<T>, callback: (newValue: T) => void): () => void {
   return reactive.subscribe(handleError(callback));
 }

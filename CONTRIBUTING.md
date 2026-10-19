@@ -48,7 +48,8 @@ src/pipis/      the library: core.ts, reactive.ts, dynamic.ts, svg.ts, and the j
                 (markdown.tsx and highlight.tsx are helpers for the docs site: they use dev dependencies and are not exported)
 src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
-src/docs/       the documentation pages and the site that renders them
+docs/           the documentation, in Markdown: start/, guide/, reference/ (generated) and adr/ (the design decisions)
+src/docs/       the docs site, which renders docs/ in one scroll for now
 src/samples/    sample apps
 tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark,
                 the import-layer check, and the packer and its test)
@@ -116,6 +117,8 @@ finding, and it is fixed or the record is superseded.
 - **Every behaviour change comes with a test that fails without it.** A bug fix starts with the test that reproduces the bug.
 - **Do not delete a test to make a change pass.** Change it when its expectation is what changed, and say so in the commit.
 - **A change to documented behaviour changes the docs in the same commit**, including `LLM.md` and the examples in it.
+- **Docs are code.** Every `live` and `check` block in `docs/` is compiled and every `live` one is run (`pnpm vp run docs`); see [docs/authoring.md](docs/authoring.md). The complete examples of `LLM.md` are compiled as written, and its API snippets must be lines of `src/types/llm.check.tsx`.
+- **Every export is documented.** The first sentence of its doc comment stands alone: it is what the generated [API reference](docs/reference/api.md) shows. After changing an export or its comment, run `node tools/api.ts --out docs/reference/api.md` and commit the result with the change; the docs check fails if it is stale. A new export also goes in `STRUCTURE` in `tools/api.ts`.
 - **A change to a public default, or a removed export, is breaking:** say so in the commit message.
 
 ## Commits and pull requests

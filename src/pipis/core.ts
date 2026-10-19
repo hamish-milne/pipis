@@ -23,13 +23,17 @@ export function subscribe<T>(reactive: Reactive<T>, callback: (value: T) => void
   return reactive.subscribe(callback);
 }
 
+/** A value that may be reactive or static: what a prop takes when it works the same either way. Check which with {@link isReactive}. */
 export type MaybeReactive<T> = Reactive<T> | T;
 
 /** Runtime type guard for {@link Reactive} values, based on the {@link REACTIVE} brand. */
 // oxlint-disable-next-line typescript/consistent-type-assertions -- the brand is read off any value at all, which is the check that makes it a Reactive; narrowing to read it costs 19 bytes in every app
 export const isReactive = <T>(value: unknown): value is Reactive<T> => (value as Reactive<T> | null)?.[REACTIVE] === true;
 
+/** The first argument of an element: the node to mount into, or `undefined` to unmount. */
 export type JSXParent = Node | undefined;
+
+/** The second argument of an element: the node to mount before, or `null` to mount at the end of the parent. */
 export type JSXSibling = Node | null;
 
 /**
@@ -87,8 +91,7 @@ function collectChildren(child: JSXChild | JSXChildArray | undefined, into: JSXE
  * so it adds no overhead - and no extra stack frame - for the common case.
  *
  * Because of these optimizations, Fragments only support a static list of children. If
- * the structure should be dynamic, consider {@link List}, {@link ReactiveChildren}, or other
- * dynamic rendering utilities.
+ * the structure should be dynamic, use `If`, `OneOf`, `List`, `ReactiveList` or `Dynamic`.
  */
 export function Fragment({ children }: ChildrenProp): JSXElement {
   const childElements: JSXElement[] = [];

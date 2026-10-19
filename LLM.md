@@ -317,10 +317,10 @@ There is no `fallback` or `success` prop. The loading UI is the `loading` prop, 
 ## 6. Worked examples
 
 ### Todo list
-Shows: array state with whole-value replacement, `List` over ids with a per-row `select()` so a row only updates on its own data, reactive `data-*` driving CSS, `empty:hidden`.
+Shows: array state with whole-value replacement, `ReactiveList` so each row is given its todo as a reactive value and only re-fires when THAT todo changes, reactive `data-*` driving CSS, `empty:hidden`.
 
 ```tsx
-import { reactive, select, List } from "pipis";
+import { reactive, select, ReactiveList, type ReactiveReadonly } from "pipis";
 
 type Todo = { id: number; text: string; done: boolean };
 let nextId = 0;
@@ -328,7 +328,6 @@ let nextId = 0;
 function TodoApp() {
   const todos = reactive<readonly Todo[]>([]);
   const draft = reactive("");
-  const ids = select(todos, (list) => list.map((t) => t.id)); // the list source is just the ids
 
   function addTodo() {
     const text = draft.value.trim();
@@ -340,14 +339,13 @@ function TodoApp() {
     todos.value = todos.value.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
   }
 
-  // Each row derives its own fields by id, so it only re-fires when THIS todo's data changes.
-  function todoRow(id: number) {
-    const todo = select(todos, (list) => list.find((t) => t.id === id)!);
+  // The row is given its todo as a reactive value: select what it shows from it. It re-fires only when THIS todo changes.
+  function todoRow(todo: ReactiveReadonly<Todo>) {
     const text = select(todo, "text");
     const done = select(todo, "done");
     return (
       <li>
-        <button onclick={() => toggleTodo(id)} data-done={done}>
+        <button onclick={() => toggleTodo(todo.value.id)} data-done={done}>
           ✓
         </button>
         <span data-done={done} className="data-done:line-through">
@@ -373,9 +371,9 @@ function TodoApp() {
       </form>
       {/* the ul is hidden via CSS :empty, no If/OneOf needed */}
       <ul className="empty:hidden">
-        <List items={ids} itemKey={(id) => id}>
-          {(id) => todoRow(id)}
-        </List>
+        <ReactiveList items={todos} itemKey={(t) => t.id}>
+          {todoRow}
+        </ReactiveList>
       </ul>
     </div>
   );
@@ -443,15 +441,24 @@ Shows: `select()` to derive the active item from an id, and `Dynamic` used corre
 ```tsx
 import { reactive, select, Dynamic, type JSXElement } from "pipis";
 
+function Hello() {
+  return <p>Hello, world!</p>;
+}
+
+function Counter() {
+  const count = reactive(0);
+  return <button onclick={() => (count.value = count.value + 1)}>Clicked {count} times</button>;
+}
+
 type Example = { id: string; label: string; component: () => JSXElement };
-const examples: Example[] = [
-  { id: "todo", label: "Todo", component: TodoApp },
-  { id: "weather", label: "Weather", component: WeatherApp },
+const examples: [Example, ...Example[]] = [
+  { id: "hello", label: "Hello", component: Hello },
+  { id: "counter", label: "Counter", component: Counter },
 ];
 
 function Gallery() {
   const selected = reactive(examples[0].id);
-  const current = select(selected, (id) => examples.find((e) => e.id === id)!);
+  const current = select(selected, (id) => examples.find((e) => e.id === id) ?? examples[0]);
 
   return (
     <div>
@@ -511,7 +518,7 @@ subscribeWithCatch(reactive, cb)             // reactive.subscribe(handleError(c
 - A lowercase tag is an intrinsic HTML or SVG element. (MathML tags are accepted by the types but are not given the MathML namespace.) A tag that is neither, which the types do not allow, is created as an `SVGElement` rather than the `HTMLUnknownElement` you might expect. An uppercase tag is a component function. `<Foo x={1} />` is the same as `Foo({ x: 1 })`.
 - `<>...</>` (`Fragment`) renders no wrapper node and collapses to its single child when it has one or zero children.
 - Intrinsic element types come from the DOM typings. On HTML elements use `className` (not `class`); on SVG elements use `class`. Use native lowercase event names. Handlers automatically narrow `event.target` to the element's type, so no casting is needed.
-- Attribute types follow the DOM typings. `style` values are strings (with units), but numeric attributes such as `min` and `max` take numbers. SVG attributes are all strings (see section 8). Any attribute value can also be a `Reactive` of its type.
+- Attribute types follow the DOM typings. `style` values are strings (with units). A numeric attribute takes whatever type the DOM declares for it: `min`, `max` and `value` on an `<input>` are strings (`min="0"`, `value={select(n, String)}`), while on `<meter>` and `<progress>` they are numbers. SVG attributes are all strings (see section 8). Any attribute value can also be a `Reactive` of its type.
 - `ref` accepts a callback `(node) => void` or any object with a settable `.value`, so a `reactive` works as a ref. It fires at CONSTRUCTION time (see mistake 7).
 
 ```ts

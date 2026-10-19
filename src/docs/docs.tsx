@@ -6,15 +6,32 @@ import { reactive, select, Effect, Watch, type JSXElement, type Reactive } from 
 import { Markdown, renderToken, renderTokens, type MarkdownRenderer } from '../pipis/markdown.tsx';
 import { HighlightJS } from '../pipis/highlight.tsx';
 
-import introduction from './01-introduction.md?raw';
-import gettingStarted from './02-getting-started.md?raw';
-import reactiveValues from './03-reactive-values.md?raw';
-import dynamicUi from './04-dynamic-ui.md?raw';
-import comparisonWithReact from './05-comparison-with-react.md?raw';
-import utilities from './06-utilities.md?raw';
-import patternsAndPitfalls from './07-patterns-and-pitfalls.md?raw';
+// The pages are the Markdown in docs/, the single source. This shows them in one scroll; a site with a page for each is built on it.
+import introduction from '../../docs/start/introduction.md?raw';
+import gettingStarted from '../../docs/start/getting-started.md?raw';
+import reactiveValues from '../../docs/guide/reactive-values.md?raw';
+import dynamicUi from '../../docs/guide/dynamic-ui.md?raw';
+import utilities from '../../docs/guide/utilities.md?raw';
+import comparisonWithReact from '../../docs/guide/comparison-with-react.md?raw';
+import patternsAndPitfalls from '../../docs/guide/patterns-and-pitfalls.md?raw';
+import customElements from '../../docs/guide/custom-elements.md?raw';
+import lifecycle from '../../docs/guide/lifecycle.md?raw';
+import nonGoals from '../../docs/guide/non-goals.md?raw';
+import cookbook from '../../docs/guide/cookbook.md?raw';
 
-const content = [introduction, gettingStarted, reactiveValues, dynamicUi, comparisonWithReact, utilities, patternsAndPitfalls].join('\n\n');
+const content = [
+  introduction,
+  gettingStarted,
+  reactiveValues,
+  dynamicUi,
+  utilities,
+  comparisonWithReact,
+  patternsAndPitfalls,
+  customElements,
+  lifecycle,
+  nonGoals,
+  cookbook,
+].join('\n\n');
 
 function slugify(text: string) {
   return text
@@ -182,16 +199,19 @@ export function Docs() {
             {renderTokens(token, docsRenderer)}
           </a>
         );
-      case 'code':
+      case 'code': {
+        // The info string can carry the docs words (`tsx live title="..."`); the language is its first word.
+        const language = token.lang?.split(/\s/)[0];
         return (
           // Always dark, regardless of site theme, to match the (dark-only) highlight.js theme.
           <div ref={trackBlock} className="mb-4 overflow-hidden rounded-xl bg-slate-900 ring-1 ring-white/10 scheme-dark">
-            {token.lang && <div className="border-b border-white/10 px-4 py-1.5 font-mono text-xs text-slate-400">{token.lang}</div>}
+            {language && <div className="border-b border-white/10 px-4 py-1.5 font-mono text-xs text-slate-400">{language}</div>}
             <pre className="overflow-x-auto p-4 text-[13px] leading-6">
-              <HighlightJS language={token.lang}>{token.text}</HighlightJS>
+              <HighlightJS language={language}>{token.text}</HighlightJS>
             </pre>
           </div>
         );
+      }
       default:
         return renderToken(token, docsRenderer);
     }
