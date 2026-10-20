@@ -399,3 +399,23 @@ describe('when it cannot', () => {
     expect(() => hydrate(container, createElement('p', { children: createElement('b', {}) }))).not.toThrow();
   });
 });
+
+describe('attributes', () => {
+  it('leaves an attribute that is what it is to be, so that an iframe is not loaded again, and writes one that is not', () => {
+    page('<div><iframe src="/a" title="old"></iframe></div>');
+    const frame = container.querySelector('iframe');
+    if (!frame) throw new Error('iframe');
+    const written: string[] = [];
+    const watch = new MutationObserver(() => {});
+    watch.observe(frame, { attributes: true });
+    run(
+      <div>
+        <iframe src="/a" title="new" />
+      </div>,
+    );
+    for (const r of watch.takeRecords()) written.push(String(r.attributeName));
+    watch.disconnect();
+    expect(written).toEqual(['title']);
+    expect(frame.title).toBe('new');
+  });
+});

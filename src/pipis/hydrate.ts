@@ -4,7 +4,7 @@ import { IS_HYDRATE } from '#platform';
 import type { Cleanup, JSXElement } from './base.ts';
 import { dynamic } from './dynamic.ts';
 import { adoptRange, hydrating } from './hydrated.ts';
-import { hydrateInto } from './platform.hydrate.ts';
+import { hydrateInto, logMismatch } from './platform.hydrate.ts';
 
 /** What a hydration found of the page: nodes it had to make because the server's page had none, and nodes of the server's that the page did not want. */
 export interface HydrationReport {
@@ -22,11 +22,6 @@ export interface HydrateOptions {
    * default logs it to the console; pass a function to do something else (or one that does nothing, to be told nothing).
    */
   onMismatch?: (report: HydrationReport) => void;
-}
-
-function logMismatch({ missing, extraneous, error }: HydrationReport) {
-  const found = error === undefined ? `${missing} missing and ${extraneous} extra nodes` : 'an error, and the page was built again';
-  console.warn(`pipis: the page did not match what the server wrote (${found}).`, error ?? '');
 }
 
 /**
@@ -52,9 +47,11 @@ export function hydrate(container: Element, element: JSXElement, options: Hydrat
 /**
  * Content that never changes, which a page that is hydrated takes as the server wrote it, without running `children`: so what makes it (a
  * Markdown renderer, say) need not be run in the browser, and, with a build that leaves it out, is not in the page's code. Anywhere else it is
- * its content, made from `children()`.
+ * its content, made from `children()`. `children` is optional because the browser is not given it: a page whose content is made on the server
+ * passes the content to the components as functions, and the data it sends to the browser, which cannot hold a function, has none.
+ * A `Static` with nothing to make is empty.
  */
-export function Static({ children }: { children: () => JSXElement }): JSXElement {
+export function Static({ children }: { children?: () => JSXElement }): JSXElement {
   let content: JSXElement | undefined;
   return dynamic(
     function Static_mount(parent, sibling): Cleanup | void {
@@ -64,8 +61,8 @@ export function Static({ children }: { children: () => JSXElement }): JSXElement
           for (const node of adopted) node.parentNode?.removeChild(node);
         };
       }
-      content ??= children();
-      content(parent, sibling);
+      content ??= children?.();
+      content?.(parent, sibling);
     },
     function Static_unmount() {
       content?.();

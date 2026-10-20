@@ -14,6 +14,12 @@ import { setText } from './internal.ts';
 import { createNode } from './dom.ts';
 import type { HydrationReport } from './hydrate.ts';
 
+/** The default report of a mismatch: a line on the console. */
+export function logMismatch({ missing, extraneous, error }: HydrationReport) {
+  const found = error === undefined ? `${missing} missing and ${extraneous} extra nodes` : 'an error, and the page was built again';
+  console.warn(`pipis: the page did not match what the server wrote (${found}).`, error ?? '');
+}
+
 export { createMarker, createNode, head, setAttribute } from './dom.ts';
 
 /** Whether the code runs in a browser: `true` here. */
@@ -252,9 +258,10 @@ function clearHead() {
 /**
  * Hydrates `container`: mounts `element` into it, adopting what the server wrote there. It is synchronous, and when it is done the page is as it
  * would have been made by the browser alone, and everything is as it is for a page that the browser made: what was held back (the effects, and the
- * refs) has run. Returns what it found. If it fails, the page is made again, from nothing.
+ * refs) has run. Returns what it found. If it fails, the page is made again, from nothing. `head` is whether what the server's `Helmet` wrote is
+ * replaced: the first hydration of a page does that, and a later one (an island's) does not.
  */
-export function hydrateInto(container: Element, element: JSXElement): HydrationReport {
+export function hydrateInto(container: Element, element: JSXElement, head = true): HydrationReport {
   if (active) throw new Error('hydrate was called while another page was being hydrated.');
   active = true;
   unclaimed = new WeakSet();
@@ -262,7 +269,7 @@ export function hydrateInto(container: Element, element: JSXElement): HydrationR
   deferred = [];
   bounds.length = 0;
   walk(container);
-  clearHead();
+  if (head) clearHead();
   let failure: unknown;
   try {
     bounded(null, () => element(container));

@@ -7,7 +7,7 @@ import { type Cleanup, type JSXElement, type Reactive, isReactive, moveNode, set
 import type { PropBag, PropValue } from './internal.ts';
 import { bounded, claimElement, createNode, defer, hydrating, setAttribute, sweep } from './platform.hydrate.ts';
 
-export { adoptRange, claimRegion, defer, hydrating, plain } from './platform.hydrate.ts';
+export { adoptRange, claimRegion, defer, hydrateInto, hydrating, logMismatch, plain } from './platform.hydrate.ts';
 
 /** A prop of an element, which is given when it is mounted: its own, or one of its `style`'s. */
 interface Prop {
@@ -63,7 +63,11 @@ export function hydratedElement(type: string, props: PropBag, children: JSXEleme
   }
 
   const apply = (node: Element, { style, key }: Prop, newValue: PropValue) => {
-    if (hydrating() && isDirty(node, key)) return;
+    if (hydrating()) {
+      if (isDirty(node, key)) return;
+      // An attribute that is what it is to be is left alone: giving an `iframe` its `src` again, even the same, loads it again.
+      if (!style && typeof newValue === 'string' && node.getAttribute(key) === newValue) return;
+    }
     // oxlint-disable-next-line typescript/consistent-type-assertions -- `style` is on the HTML and SVG elements that props can name it for
     setAttribute(style ? (node as HTMLElement).style : node, key, newValue);
   };

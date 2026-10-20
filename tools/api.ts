@@ -122,7 +122,7 @@ export const STRUCTURE: { title: string; about: string; names: string[] }[] = [
     title: 'Islands',
     about:
       'Interactive components in a page that is made on a server, mounted in the browser over what the server wrote. Imported from `pipis/islands`. See the [guide to islands](../guide/islands.md).',
-    names: ['Island', 'mountIslands'],
+    names: ['Island', 'Slot', 'mountIslands'],
   },
   {
     title: 'Hydration',

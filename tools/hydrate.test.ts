@@ -183,11 +183,60 @@ describe('what each build has', () => {
   it('has the finding of nodes only in the build that hydrates', async () => {
     const hydrating = await ship(['pipis-hydrate']);
     const browser = await ship();
-    expect(hydrating).toContain('while the page was being hydrated');
+    expect(hydrating).toContain('another page was being hydrated');
     expect(hydrating).toContain('did not match');
-    expect(browser).not.toContain('while the page was being hydrated');
+    expect(browser).not.toContain('another page was being hydrated');
     expect(browser).not.toContain('did not match');
     expect(browser).toContain('needs the hydrating build');
     expect(hydrating).not.toContain('needs the hydrating build');
   });
+});
+
+describe('islands, hydrated', () => {
+  // A page whose text is static and has an island in it, made on the server, hydrated, and its island mounted: nothing the server wrote is replaced.
+  const fixture = join(root, 'tools/server.islands.tsx');
+  const options = {
+    alias: { ...alias, 'pipis/islands': src('islands.ts'), islands: fixture },
+    jsxImportSource: 'pipis',
+    type: 'tsx',
+  } as const;
+  const imports = `import { Island, mountIslands } from 'pipis/islands'; import { Static } from 'pipis/hydrate'; import { Counter, components } from 'islands';`;
+
+  it('adopts the markup of a page and of the islands in its static text, with nothing made again', async () => {
+    mkdirSync(out, { recursive: true });
+    const server = await load<{ render(): string }>('islands-server', {
+      ...options,
+      contents: `${imports} import { renderToString } from 'pipis/server';
+const page = () => <main><h1>Title</h1><Static>{() => <section><p>Text</p><Island name="counter" component={Counter} props={{ start: 2, label: 'n' }} /></section>}</Static><Island name="counter" component={Counter} props={{ start: 7, label: 'm' }} /></main>;
+export const render = () => renderToString(page(), { hydratable: true }).html;`,
+      platform: 'node',
+      conditions: ['pipis-server'],
+    });
+    const browser = await load<{ start(container: Element): void }>('islands-hydrate', {
+      ...options,
+      contents: `${imports} import { hydrate } from 'pipis/hydrate';
+const page = () => <main><h1>Title</h1><Static /><Island name="counter" component={Counter} props={{ start: 7, label: 'm' }} /></main>;
+export const start = (container) => { hydrate(container, page()); mountIslands(components, container); };`,
+      conditions: ['pipis-hydrate'],
+    });
+    reset();
+    const container = document.createElement('div');
+    container.innerHTML = server.render();
+    document.body.append(container);
+    const before = descendants(container);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      browser.start(container);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+    const kept = [...descendants(container)].filter((n) => !before.has(n) && !(n instanceof Text && n.data === ''));
+    expect(kept.map((n) => n.nodeName)).toEqual([]);
+    const buttons = container.querySelectorAll('button');
+    expect([...buttons].map((b) => b.textContent)).toEqual(['n: 2', 'm: 7']);
+    buttons[0]?.click();
+    buttons[1]?.click();
+    expect([...buttons].map((b) => b.textContent)).toEqual(['n: 3', 'm: 8']);
+  }, 30_000);
 });

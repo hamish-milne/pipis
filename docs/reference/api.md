@@ -680,13 +680,32 @@ From `pipis/islands`.
 Renders `component` as an island: on a server, its markup inside an element that names it and carries its `props` as JSON, for `mountIslands`
 to find in the browser; in the browser, just the component. The props have to be what JSON can hold, and are best small.
 
-The marker is an element with `display: contents`, so it takes no part in the layout of the page.
+The marker is an element with `display: contents`, so it takes no part in the layout of the page. In a build that hydrates the marker is made in
+the browser as well, because the server wrote it and a page that is hydrated is made of what the server wrote; it is then the page's own, and
+`mountIslands` leaves it.
 
 ```ts
 function Island<P extends object = {}>(props: {
     name: string;
     component: (props: P) => JSXElement;
     props?: P;
+}): JSXElement;
+```
+
+### `Slot`
+
+From `pipis/islands`.
+
+Content inside an island that only the server can make (the highlighted code of a block, say), which the browser takes as it was written. The
+server calls `children` and writes what it makes inside a marker; the browser, which does not have `children` (an island's props are JSON, and a
+function is not), moves the marker, with what is in it, out of the markup that the island replaces and into the island's own. So the content is
+not made again, and does not flash, and what makes it is not in the browser's bundle. A page that is hydrated adopts it in place. A name tells
+two slots of one island apart; slots are taken as the island is made, so they cannot be in what an island shows later.
+
+```ts
+function Slot(props: {
+    name?: string;
+    children?: () => JSXElement;
 }): JSXElement;
 ```
 
@@ -699,8 +718,9 @@ made with the props that were written, and mounted over what the server wrote. `
 only those are in the bundle that imports them. It returns what unmounts them all.
 
 The server's markup of an island is replaced, not adopted: the page is complete before this runs, and the island's own markup is made again
-by the component, so what an island shows has to be what the component makes when it is first mounted. An island that throws is reported and
-leaves the rest of the page, and the other islands, as they are.
+by the component, so what an island shows has to be what the component makes when it is first mounted. In a build that hydrates it is adopted
+(each island is a page of its own to `hydrate`, with the same repair and report), so nothing flashes and nothing that a reader has done is lost.
+An island that throws is reported and leaves the rest of the page, and the other islands, as they are.
 
 ```ts
 function mountIslands(components: Record<string, (props: never) => JSXElement>, root?: ParentNode): Cleanup;
@@ -765,11 +785,13 @@ From `pipis/hydrate`.
 
 Content that never changes, which a page that is hydrated takes as the server wrote it, without running `children`: so what makes it (a
 Markdown renderer, say) need not be run in the browser, and, with a build that leaves it out, is not in the page's code. Anywhere else it is
-its content, made from `children()`.
+its content, made from `children()`. `children` is optional because the browser is not given it: a page whose content is made on the server
+passes the content to the components as functions, and the data it sends to the browser, which cannot hold a function, has none.
+A `Static` with nothing to make is empty.
 
 ```ts
 function Static({ children }: {
-    children: () => JSXElement;
+    children?: () => JSXElement;
 }): JSXElement;
 ```
 

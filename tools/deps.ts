@@ -34,7 +34,7 @@ export const LIBRARY: Record<string, string[]> = {
   dynamic: ['base', 'core', 'hydrated', 'reactive', '#platform'],
   serialize: [],
   server: ['#platform', 'platform.server', 'serialize'],
-  islands: ['core', 'serialize', '#platform'],
+  islands: ['base', 'core', 'hydrate', 'hydrated', 'serialize', '#platform'],
   hydrate: ['#platform', 'dynamic', 'hydrated', 'platform.hydrate'],
   'jsx-runtime': ['core'],
   'jsx-dev-runtime': ['jsx-runtime', 'core'],

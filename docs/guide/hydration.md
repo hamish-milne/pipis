@@ -88,6 +88,50 @@ export function Article(props: { source: string }) {
 
 In a hydrating build the children are not called, so the renderer is not run. To leave the renderer out of the browser's bundle too, import it only where the build is not hydrating (the bundler removes a branch on `IS_HYDRATE`, which is a constant).
 
+## A page that is mostly text, and a few parts that do something
+
+`Static` does not need the content to be in the browser's code at all: `children` is optional, and the content can be given to the components as functions that only the server has. The app is written once, with the parts that are only read as `Static` slots, and the data that the browser hydrates with is the page's JSON, in which a function is not, so the slots are empty there:
+
+```tsx check title="A page with slots" id=slots
+import { Static } from 'pipis/hydrate';
+
+export interface View {
+  title: string;
+  /** Made on the server (from Markdown, say), and not in the data the browser is sent. */
+  body: (() => JSX.Element) | undefined;
+}
+
+export function Article(props: { view: View }) {
+  return (
+    <article>
+      <h1>{props.view.title}</h1>
+      <Static>{props.view.body}</Static>
+    </article>
+  );
+}
+```
+
+On the server the view has `body`, and `serializeData(view)` writes it into the page without it; the browser reads the data back and hydrates `Article` with a view whose `body` is nothing, and takes the markup that the server wrote. What makes `body` is imported only by the server's code, so it is not in the browser's bundle. This documentation site is made so: [site/app.tsx](https://github.com/neofox-solutions/pipis/blob/main/site/app.tsx) is the page, once, and [site/docs.server.tsx](https://github.com/neofox-solutions/pipis/blob/main/site/docs.server.tsx) is what the server makes its text from (the Markdown, the highlighted code, the navigation), which the build replaces with a stub in the browser's script, so none of it is there.
+
+## Islands in text that is only read
+
+A page can be hydrated as a whole, or mounted as islands, or both: the text that is only read is `Static`, and the parts of it that do something are islands. In a hydrating build, `mountIslands` hydrates each island (with the same repair and report as `hydrate`) instead of replacing it, and an island in a page that is hydrated is the page's own, so it is not mounted twice:
+
+```tsx check title="A page that is hydrated, with islands in its text"
+import { hydrate } from 'pipis/hydrate';
+import { mountIslands } from 'pipis/islands';
+import { App } from './app.tsx';
+
+const container = document.getElementById('app');
+if (container) {
+  hydrate(container, <App />);
+  // The islands in `Static` text were not made by the app, and are mounted over what the server wrote.
+  mountIslands({}, container);
+}
+```
+
+An island that has content only the server makes takes it as a prop that is a function (`content`), which the server calls and the data it writes for the browser does not hold; the component puts it in a `Static`, and the browser takes what was written. Leave the `hydrate` line out and the same page is mounted as islands only, with the page's own components not in the script (and, with an ordinary build of the library, the islands made again in the browser: an island's content from the server then goes in a `Slot`, see [Islands](islands.md)). This documentation site is built both ways from one set of components (`vp build --config site/islands.config.ts`).
+
 ## What it costs
 
 The hydrating build adds about 1.3 KB (gzipped) to the browser's code, for the finding of nodes, and nothing to a build without the condition. See the [decision record](../adr/0021-hydration.md) for the reasoning and the tests.

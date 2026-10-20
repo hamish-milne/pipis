@@ -1,7 +1,6 @@
 // One configuration for the toolchain (Vite+): the site build, the task runner, and Oxlint's and Oxfmt's settings.
 import { defineConfig } from 'vite-plus';
 import { playwright } from 'vite-plus/test/browser-playwright';
-import tailwindcss from '@tailwindcss/vite';
 import { docsSite } from './site/vite-plugin.ts';
 
 // Tests that need `pipis` to be the server's, or the hydrating one: they run in their own projects.
@@ -9,8 +8,7 @@ const SERVER_ONLY = ['**/node_modules/**', '**/*.server.test.*', '**/*.hydrate.t
 
 export default defineConfig({
   // The documentation site: `vp dev` serves it (and reloads on a change), `vp build` writes it into dist/ (site/vite-plugin.ts).
-  // Tailwind is for the demo apps only.
-  plugins: [tailwindcss(), docsSite()],
+  plugins: [docsSite({ render: 'islands', pages: 'single' })],
   test: {
     // Each project says what it runs: an `include` here would be merged into both.
     // A fresh process per file, so a test that leaves a subscriber or a DOM node behind cannot colour the next one.

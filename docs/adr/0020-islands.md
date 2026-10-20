@@ -26,8 +26,9 @@ node being fixed at construction), and is a decision for a later record, taken w
 - `tools/server.test.ts` renders a page with an island on the server, mounts it in jsdom from the browser's build, clicks it, and checks that the
   page around it is the same nodes; and that the browser's script, minified, has none of the server's code (its HTML tables, the marker, the
   render).
-- The documentation site is made of it: `site/islands.tsx` (the theme switch, the menu, the search button, the copy buttons, the bar of each
-  example, the contents) and `site/search.tsx`, with the whole-site tests in Chromium (`site/site.test.ts`).
+- The documentation site was first made of it (the theme switch, the menu, the search button, the copy buttons, the bar of each example, the
+  contents), with the whole-site tests in Chromium (`site/site.test.ts`). It has since moved to hydration ([ADR 21](0021-hydration.md)), which is the
+  comparison that this record's measurement was left for.
 - **Measurement.** `mountIslands` costs a browser app 264 bytes gzipped and no server code (`node tools/size.ts`). Replacing the site's
   hand-written script (`page.ts` and `search.ts`, 253 lines that make a statement) with islands made it **larger, not smaller**: 375 lines, and a page
   script of 3.4 KB gzipped, up from 1.4 KB, because it now has pipis in it and the search is a component with its own state. What is better is

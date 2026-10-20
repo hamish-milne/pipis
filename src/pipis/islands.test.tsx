@@ -5,7 +5,7 @@
 // and that the two fit together is tools/server.test.ts, which renders a page on the server and mounts its islands in jsdom.)
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 import { reactive, select, type JSXElement } from './index.ts';
-import { Island, mountIslands } from './islands.ts';
+import { Island, Slot, mountIslands } from './islands.ts';
 import { mount } from '../test/dom.ts';
 
 function Counter(props: { start: number }): JSXElement {
@@ -125,5 +125,66 @@ describe('Island in the browser', () => {
   it('is only the component: there is no page to mark it in', () => {
     const { root } = mount(<Island name="counter" component={Counter} props={{ start: 2 }} />);
     expect(root.innerHTML).toBe('<button>Clicked 2</button>');
+  });
+});
+
+describe('Slot', () => {
+  /** What the server writes for `Block` below, with its content in a slot. */
+  const BLOCK = (slot = '<pre>code</pre>') =>
+    `<div data-island="block" data-props="{&quot;title&quot;:&quot;T&quot;}" style="display: contents;"><figure><figcaption>T</figcaption><div data-slot="content" style="display: contents;">${slot}</div></figure></div>`;
+
+  function Block(props: { title: string; content?: () => JSXElement }): JSXElement {
+    const open = reactive(false);
+    return (
+      <figure className={select(open, (o) => (o ? 'open' : 'shut'))}>
+        <button onclick={() => (open.value = !open.value)}>{props.title}</button>
+        <Slot>{props.content}</Slot>
+      </figure>
+    );
+  }
+
+  it('moves what the server wrote into the island that replaces the markup, so it is the same node and is not made again', () => {
+    const root = made(`<main>${BLOCK()}</main>`);
+    const code = root.querySelector('pre');
+    mountIslands({ block: Block }, root);
+    expect(root.querySelector('pre'), 'the code is the server’s').toBe(code);
+    expect(root.querySelectorAll('pre').length).toBe(1);
+    // It is inside the island's own markup now, after the button, and the island works.
+    expect(root.querySelector('figure')?.firstElementChild?.tagName).toBe('BUTTON');
+    expect(code?.closest('figure')).toBe(root.querySelector('figure'));
+    root.querySelector('button')?.click();
+    expect(root.querySelector('figure')?.className).toBe('open');
+  });
+
+  it('keeps the slots of an island apart by their names', () => {
+    const Two = () => (
+      <section>
+        <Slot name="b" />
+        <Slot name="a" />
+      </section>
+    );
+    const root = made(
+      '<div data-island="two"><div data-slot="a" style="display: contents;"><i>A</i></div><div data-slot="b" style="display: contents;"><b>B</b></div></div>',
+    );
+    mountIslands({ two: Two }, root);
+    expect(root.querySelector('section')?.textContent).toBe('BA');
+  });
+
+  it('renders its own content when the browser makes the island with no markup from the server, if it is given any', () => {
+    const root = made('<div data-island="block" data-props="{&quot;title&quot;:&quot;T&quot;}"></div>');
+    mountIslands({ block: (p: { title: string }) => Block({ ...p, content: () => <pre>made here</pre> }) }, root);
+    expect(root.querySelector('pre')?.textContent).toBe('made here');
+  });
+
+  it('is empty when there is nothing from the server and nothing to make', () => {
+    const root = made('<div data-island="block" data-props="{&quot;title&quot;:&quot;T&quot;}"></div>');
+    mountIslands({ block: Block }, root);
+    expect(root.querySelector('pre')).toBeNull();
+    expect(root.querySelector('button')?.textContent).toBe('T');
+  });
+
+  it('is only its content in the browser, where there is no page to mark it in', () => {
+    const { root } = mount(<Slot>{() => <pre>x</pre>}</Slot>);
+    expect(root.innerHTML).toBe('<pre>x</pre>');
   });
 });

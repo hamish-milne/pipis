@@ -56,8 +56,8 @@ src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 docs/           the documentation, in Markdown: start/, guide/, reference/ (generated) and adr/ (the design decisions)
 src/samples/    the demo apps, which the site shows (`demo-app.html` is the page they are built into)
-docs-kit/       the documentation site's engine: Markdown read into tokens, pages and navigation, the live examples' frames and editor, the search. It knows nothing of pipis
-site/           this site, a pipis app on the kit: the document and layout, the Markdown component and the renderer for the docs, the islands (islands.tsx, search.tsx) and the script that mounts them (client.ts), the style sheet, the adapter that mounts an example, the build and the tests
+docs-kit/       the documentation site's engine, a Vite plugin: Markdown read into tokens, pages and navigation, how they are built and served, the live examples' frames and editor, the search. It knows nothing of pipis
+site/           this site, a pipis app on the kit: the page as one app (app.tsx), what only the server makes of it (docs.server.tsx, a stub in the browser's build; markdown.tsx is the Markdown component), the islands (controls.tsx, blocks.tsx, search.tsx) and the script that makes the page live (client.ts), the server's entry, the options of the plugin, the style sheet, the adapter that mounts an example, and the tests
 tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark,
                 the import-layer check, and the packer and its test)
 docs/adr/      the design assumptions, one record each, with the tests and measurements that could disprove them
