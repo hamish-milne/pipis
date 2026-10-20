@@ -13,6 +13,7 @@
  *
  * Imports are from "pipis" itself, as in LLM.md, which also checks that the package's `exports` resolve.
  */
+import { Island, mountIslands } from 'pipis/islands';
 import { renderToString, serializeData } from 'pipis/server';
 import {
   IS_CLIENT,
@@ -610,4 +611,12 @@ export function serverRenderingExamples() {
   const theme = reactive(IS_CLIENT ? (localStorage.getItem('theme') ?? 'light') : 'light');
   const { html, head } = renderToString(<App />);
   return [theme, html, head, serializeData({ a: 1 })];
+}
+
+/** The islands section of LLM.md. */
+export function islandExamples() {
+  const Counter = (props: { start: number }) => <button>{props.start}</button>;
+  const page = <Island name="counter" component={Counter} props={{ start: 3 }} />;
+  mountIslands({ counter: Counter });
+  return page;
 }

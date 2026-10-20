@@ -28,11 +28,4 @@ export function renderToString(element: JSXElement): RenderResult {
   return renderRoot(element);
 }
 
-/**
- * Data for the browser to read, as text to put inside `<script type="application/json">`. It is JSON with `<`, `>`, `&` and the two line
- * separators written as escapes, so that the data cannot end the script or begin another tag. A value JSON cannot hold (`undefined`, a function)
- * is `null`.
- */
-export function serializeData(value: unknown): string {
-  return (JSON.stringify(value) ?? 'null').replace(/[<>&\u2028\u2029]/g, (c) => '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4));
-}
+export { serializeData } from './serialize.ts';

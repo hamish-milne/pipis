@@ -37,7 +37,8 @@
     ".": "./src/pipis/index.ts",
     "./jsx-runtime": "./src/pipis/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/pipis/jsx-dev-runtime.ts",
-    "./server": "./src/pipis/server.ts"
+    "./server": "./src/pipis/server.ts",
+    "./islands": "./src/pipis/islands.ts"
   },
   "devDependencies": {
     "@preact/signals-core": "catalog:",

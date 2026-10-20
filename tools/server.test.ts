@@ -205,6 +205,65 @@ describe('the data function of the guide to server rendering', () => {
   });
 });
 
+describe('islands', () => {
+  // A page is made on the server, with an island in it; the browser's entry mounts the islands of the page it is given. The two are built the way
+  // an app builds them: the server with the condition, and the browser without it, and what the browser's build takes is only what it needs.
+  const fixture = join(root, 'tools/server.islands.tsx');
+  const imports = `import { Island, mountIslands } from 'pipis/islands'; import { Counter, components } from 'islands';`;
+
+  async function build() {
+    mkdirSync(out, { recursive: true });
+    const options = {
+      alias: { ...alias, 'pipis/islands': src('islands.ts'), islands: fixture },
+      jsxImportSource: 'pipis',
+      type: 'tsx',
+    } as const;
+    const server = await bundle({
+      ...options,
+      contents: `${imports} import { renderToString } from 'pipis/server';
+export const page = () => renderToString(<main><h1>Static</h1><Island name="counter" component={Counter} props={{ start: 2, label: '</div> & "x"' }} /><p>Also static</p></main>).html;`,
+      platform: 'node',
+      conditions: ['pipis-server'],
+    });
+    const browser = await bundle({ ...options, contents: `${imports} export { mountIslands, components };` });
+    const shipped = await bundle({ ...options, contents: `${imports} mountIslands(components);`, minify: true });
+    writeFileSync(join(out, 'islands-server.mjs'), server);
+    writeFileSync(join(out, 'islands-browser.mjs'), browser);
+    return { shipped };
+  }
+
+  it('mounts an island over the markup the server wrote, and leaves the page around it as it was', async () => {
+    const { shipped } = await build();
+    const server: { page(): string } = await import(/* @vite-ignore */ pathToFileURL(join(out, 'islands-server.mjs')).href);
+    const browser: { mountIslands(c: unknown, root?: ParentNode): () => void; components: unknown } = await import(
+      /* @vite-ignore */ pathToFileURL(join(out, 'islands-browser.mjs')).href
+    );
+    const html = server.page();
+    expect(html).toContain('data-island="counter"');
+    expect(html).not.toContain('</div> &'); // the label's own markup is escaped
+
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    document.body.append(container);
+    const [title, tail] = [container.querySelector('h1'), container.querySelector('p')];
+    const before = container.querySelector('button')?.textContent;
+    expect(before, 'what the server wrote is already what the island shows').toBe('</div> & "x": 2');
+
+    const unmount = browser.mountIslands(browser.components, container);
+    const button = container.querySelector('button');
+    button?.click();
+    expect(button?.textContent).toBe('</div> & "x": 3');
+    expect(container.querySelector('h1')).toBe(title);
+    expect(container.querySelector('p')).toBe(tail);
+    unmount();
+    container.remove();
+
+    // What is shipped for the browser: the mounting, and not what writes a marker or the server's platform.
+    for (const text of ['acronym', 'contents', 'display', 'another render was in progress']) expect(shipped, text).not.toContain(text);
+    expect(shipped).toContain('data-island');
+  });
+});
+
 describe('the live examples of the documentation', () => {
   const live = allBlocks(root).filter((b) => b.kind === 'live');
   // They make nodes with `document`, which a server has not got: they are for a browser, and the server says so.

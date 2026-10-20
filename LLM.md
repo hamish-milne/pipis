@@ -2,7 +2,7 @@
 
 pipis is a small JSX UI framework with **no virtual DOM, no re-rendering and no hooks**. Read this whole file before writing code. Sections are ordered by how much they matter. A checklist to run before you answer is at the end.
 
-Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write, and `pipis/server`, for rendering to HTML on a server (section 7). Never import from `react`.
+Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write, `pipis/server`, for rendering to HTML on a server, and `pipis/islands`, for the interactive parts of such a page (section 7). Never import from `react`.
 
 To use JSX, the project's `tsconfig.json` needs `"jsx": "react-jsx"` and `"jsxImportSource": "pipis"` (and its bundler the same import source: Vite `esbuild: { jsxImportSource: "pipis" }`). A single file can instead start with `/** @jsxImportSource pipis */`. pipis needs a DOM and ES2015 built-ins (`Map`, `Set`, `Symbol`); its source uses newer syntax (`??`, `?.`, `??=`), which a bundler targeting an older browser must lower.
 
@@ -60,6 +60,7 @@ If the project already has a main file that mounts your component, do not mount 
 | render somewhere else in the DOM / into `<head>`                | `Portal` + `PortalTarget` / `Helmet`                                |
 | share a value with deep descendants                             | `defineContext`                                                     |
 | render HTML on a server, or at build time                       | `renderToString(<App />)` from `"pipis/server"` (see section 7)     |
+| a mostly static server-rendered page with a few interactive parts | `Island` on the server, `mountIslands` in the browser, from `"pipis/islands"` (section 7) |
 | run browser-only code in a component that is also server-rendered | `IS_CLIENT`, or an `Effect` (which does not run on a server)      |
 | get a DOM node                                                  | `ref` prop, then use the node inside an `Effect`                    |
 | pass a static value where a Reactive is expected                | `constant(value)`                                                   |
@@ -632,6 +633,17 @@ For HTML on a server (or at build time) the server's code is bundled with the **
 const { html, head } = renderToString(<App />);
 ```
 It is synchronous (no `await` in a component) and renders each reactive value as it is. On a server `Effect`, `Watch`, `Portal` and `Suspense`'s promise do not run (a `Suspense` shows `loading`), `ref`s and event handlers are not used, `Helmet` goes to `head`, and a tag HTML does not know is SVG as in a browser. The browser does not adopt the markup: it mounts its own over it. Pass data to the browser as a prop, written with `serializeData` into a `<script type="application/json">`.
+
+### Islands
+```ts
+Island<P>({ name: string, component: (props: P) => JSXElement, props?: P }): JSXElement   // from "pipis/islands"
+mountIslands(components: Record<string, (props) => JSXElement>, root?: ParentNode): Cleanup // from "pipis/islands"
+```
+For a page that is mostly static HTML with a few interactive components. On the server `Island` writes the component's markup inside a marker that carries its name and its props as JSON; in the browser's script `mountIslands` finds the markers and mounts the component of that name over each (the markup is replaced, not adopted). The browser's script imports only the islands, so none of the rest of the page is in its bundle. Props must be JSON, and small.
+```tsx
+<Island name="counter" component={Counter} props={{ start: 3 }} />   // on the server, in the page
+mountIslands({ counter: Counter });                                   // in the browser's script
+```
 
 ## 8. Styling and DOM notes
 

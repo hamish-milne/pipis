@@ -104,6 +104,7 @@ describe('the documentation', () => {
             'pipis/jsx-runtime': ['../../src/pipis/jsx-runtime.ts'],
             'pipis/jsx-dev-runtime': ['../../src/pipis/jsx-dev-runtime.ts'],
             'pipis/server': ['../../src/pipis/server.ts'],
+            'pipis/islands': ['../../src/pipis/islands.ts'],
           },
         },
         include: ['*.ts', '*.tsx'],

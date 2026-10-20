@@ -14,6 +14,7 @@ const baselineFile = root + 'tools/size-baseline.json';
 const alias = {
   pipis: root + 'src/pipis/index.ts',
   'pipis/jsx-runtime': root + 'src/pipis/jsx-runtime.ts',
+  'pipis/islands': root + 'src/pipis/islands.ts',
 };
 
 type Scenario = {
@@ -124,6 +125,20 @@ export const app = <button onclick={() => (count.value = count.value + 1)}>{labe
   {
     name: 'Helmet',
     source: counter(', Helmet', ", Helmet({ children: createElement('title', { children: 'x' }) })"),
+    base: COUNTER,
+  },
+  {
+    // The browser's side of islands: the counter is mounted over the server's markup. (`Island`, which writes the marker, is the server's and is
+    // not in this bundle.)
+    name: 'mountIslands (the counter as an island)',
+    source: `import { reactive, select, createElement } from 'pipis';
+import { mountIslands } from 'pipis/islands';
+function Counter() {
+  const count = reactive(0);
+  const label = select(count, (n) => 'Clicked ' + n + ' times');
+  return createElement('button', { onclick: () => (count.value = count.value + 1), children: [label] });
+}
+export const unmount = mountIslands({ counter: Counter });`,
     base: COUNTER,
   },
   {

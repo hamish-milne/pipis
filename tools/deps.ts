@@ -27,7 +27,9 @@ export const LIBRARY: Record<string, string[]> = {
   core: ['base', '#platform'],
   reactive: ['base'],
   dynamic: ['base', 'core', 'reactive', '#platform'],
-  server: ['#platform', 'platform.server'],
+  serialize: [],
+  server: ['#platform', 'platform.server', 'serialize'],
+  islands: ['core', 'serialize', '#platform'],
   'jsx-runtime': ['core'],
   'jsx-dev-runtime': ['jsx-runtime', 'core'],
 };
@@ -42,7 +44,7 @@ export const TYPES_ONLY = ['svg', 'platform'];
 export const BARREL = 'index';
 
 /** The entry points of the package: what `exports` in package.json names, so what a user can import. */
-export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime', 'server'];
+export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime', 'server', 'islands'];
 
 const moduleName = (file: string) => file.replace(/\.tsx?$/, '');
 

@@ -32,7 +32,9 @@ const ENTRY: Record<string, string> = {
   dynamic: 'pipis',
   'jsx-runtime': 'pipis/jsx-runtime',
   'jsx-dev-runtime': 'pipis/jsx-dev-runtime',
+  serialize: 'pipis/server',
   server: 'pipis/server',
+  islands: 'pipis/islands',
 };
 
 /** How the reference is laid out. Hand-written because the order and the introductions are editorial; checked to cover every export. */
@@ -113,6 +115,12 @@ export const STRUCTURE: { title: string; about: string; names: string[] }[] = [
     about:
       'What `pipis` runs on. By default it is a browser; a bundler can be told it is a server (the `pipis-server` condition), and then an element can be rendered to HTML. See the [guide to server rendering](../guide/server-rendering.md).',
     names: ['IS_CLIENT', 'renderToString', 'RenderResult', 'serializeData'],
+  },
+  {
+    title: 'Islands',
+    about:
+      'Interactive components in a page that is made on a server, mounted in the browser over what the server wrote. Imported from `pipis/islands`. See the [guide to islands](../guide/islands.md).',
+    names: ['Island', 'mountIslands'],
   },
   {
     title: 'The JSX runtime',

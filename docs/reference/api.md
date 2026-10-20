@@ -629,12 +629,49 @@ interface RenderResult {
 
 From `pipis/server`.
 
-Data for the browser to read, as text to put inside `<script type="application/json">`. It is JSON with `<`, `>`, `&` and the two line
-separators written as escapes, so that the data cannot end the script or begin another tag. A value JSON cannot hold (`undefined`, a function)
-is `null`.
+Data for the browser to read, as text to put inside `<script type="application/json">` or an attribute. It is JSON with `<`, `>`, `&` and the
+two line separators written as escapes, so that the data cannot end the script or begin another tag. A value JSON cannot hold (`undefined`,
+a function) is `null`.
 
 ```ts
 function serializeData(value: unknown): string;
+```
+
+## Islands
+
+Interactive components in a page that is made on a server, mounted in the browser over what the server wrote. Imported from `pipis/islands`. See the [guide to islands](../guide/islands.md).
+
+### `Island`
+
+From `pipis/islands`.
+
+Renders `component` as an island: on a server, its markup inside an element that names it and carries its `props` as JSON, for `mountIslands`
+to find in the browser; in the browser, just the component. The props have to be what JSON can hold, and are best small.
+
+The marker is an element with `display: contents`, so it takes no part in the layout of the page.
+
+```ts
+function Island<P extends object = {}>(props: {
+    name: string;
+    component: (props: P) => JSXElement;
+    props?: P;
+}): JSXElement;
+```
+
+### `mountIslands`
+
+From `pipis/islands`.
+
+Mounts the islands of the page: for each element that `Island` marked, in `root` (the document, if not given), the component of that name is
+made with the props that were written, and mounted over what the server wrote. `components` is every island the page may have, by name, and
+only those are in the bundle that imports them. It returns what unmounts them all.
+
+The server's markup of an island is replaced, not adopted: the page is complete before this runs, and the island's own markup is made again
+by the component, so what an island shows has to be what the component makes when it is first mounted. An island that throws is reported and
+leaves the rest of the page, and the other islands, as they are.
+
+```ts
+function mountIslands(components: Record<string, (props: never) => JSXElement>, root?: ParentNode): Cleanup;
 ```
 
 ## The JSX runtime

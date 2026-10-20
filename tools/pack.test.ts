@@ -33,6 +33,7 @@ const listing = () =>
 const read = (path: string) => tar('-xzOf', `package/${path}`);
 
 const APP = `import { Dynamic, ErrorBoundary, IS_CLIENT, If, List, OneOf, ReactiveList, Suspense, adapt, patch, reactive, select, type JSXElement } from 'pipis';
+import { Island, mountIslands } from 'pipis/islands';
 import { renderToString, serializeData, type RenderResult } from 'pipis/server';
 
 type Product = { id: number; name: string; quantity: number };
@@ -81,6 +82,8 @@ export const root: JSXElement = <Shop />;
 export const mounted: JSXElement = Counter();
 export const rendered: RenderResult = renderToString(<Shop />);
 export const data: string = serializeData({ client: IS_CLIENT });
+export const island: JSXElement = <Island name="shop" component={Shop} />;
+export const unmountIslands: () => void = mountIslands({ shop: Shop });
 `;
 
 // Each line is a mistake that must be rejected: if pipis's types came out as `any`, none of them would be.
