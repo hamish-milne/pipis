@@ -1,78 +1,24 @@
 {
-  "name": "pipis",
-  "version": "0.1.0",
-  "description": "A tiny JSX framework with no virtual DOM and no re-rendering: components run once and reactive values bind straight to DOM nodes.",
+  "name": "pipis-workspace",
+  "private": true,
+  "type": "module",
+  "description": "The pipis repository: the library, the documentation kit, and the documentation site. Each is a package of its own (packages/, apps/); this root holds what they share.",
   "license": "MIT",
   "author": "Neofox Solutions LLP and Hamish Milne",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/neofox-solutions/pipis.git"
   },
-  "homepage": "https://github.com/neofox-solutions/pipis#readme",
-  "bugs": {
-    "url": "https://github.com/neofox-solutions/pipis/issues"
-  },
-  "keywords": [
-    "jsx",
-    "reactive",
-    "ui",
-    "dom",
-    "no-virtual-dom",
-    "tiny"
-  ],
-  "private": true,
-  "type": "module",
   "packageManager": "pnpm@12.11.2",
-  "sideEffects": false,
   "engines": {
     "node": ">=24"
   },
-  "imports": {
-    "#platform": {
-      "pipis-server": "./src/pipis/platform.server.ts",
-      "pipis-hydrate": "./src/pipis/platform.hydrate.ts",
-      "default": "./src/pipis/platform.client.ts"
-    }
-  },
-  "exports": {
-    ".": "./src/pipis/index.ts",
-    "./jsx-runtime": "./src/pipis/jsx-runtime.ts",
-    "./jsx-dev-runtime": "./src/pipis/jsx-dev-runtime.ts",
-    "./server": "./src/pipis/server.ts",
-    "./islands": "./src/pipis/islands.ts",
-    "./hydrate": "./src/pipis/hydrate.ts"
-  },
   "devDependencies": {
-    "@fontsource-variable/inter": "catalog:",
-    "@fontsource-variable/jetbrains-mono": "catalog:",
-    "@preact/signals-core": "catalog:",
-    "@tailwindcss/vite": "catalog:",
-    "@types/jsdom": "catalog:",
     "@types/node": "catalog:",
-    "@vitest/browser-playwright": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
-    "chart.js": "catalog:",
     "eslint": "catalog:",
     "eslint-plugin-baseline-js": "catalog:",
-    "highlight.js": "catalog:",
-    "jotai": "catalog:",
-    "jsdom": "catalog:",
-    "marked": "catalog:",
-    "nanostores": "catalog:",
     "oxfmt": "catalog:",
-    "pagefind": "catalog:",
-    "playwright": "catalog:",
-    "prism-code-editor": "catalog:",
-    "redux": "catalog:",
-    "rolldown": "catalog:",
-    "rxjs": "catalog:",
-    "sucrase": "catalog:",
-    "svelte": "catalog:",
-    "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "valtio": "catalog:",
-    "vite-plus": "catalog:",
-    "xstate": "catalog:",
-    "zustand": "catalog:"
+    "vite-plus": "catalog:"
   }
 }

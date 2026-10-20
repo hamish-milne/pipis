@@ -1,7 +1,10 @@
 name: Publish
 
-# Stages `pipis` on npm when a GitHub release is published (`npm stage publish`); nothing goes live until a maintainer approves the
+# Stages a package on npm when a GitHub release is published (`npm stage publish`); nothing goes live until a maintainer approves the
 # staged version on npmjs.com (or with `npm stage approve <id>`), which asks for 2FA.
+#
+# The tag says which package: `v0.1.0` is `pipis` (packages/pipis), and `docs-kit-v0.1.0-beta.1` is `@pipis/docs-kit` (packages/docs-kit).
+# Each version is that package's own package.json's.
 #
 # Three jobs, so that nothing that installs or runs the repository's dependencies holds a credential:
 #  - verify: checks the tag, runs everything, and builds what will be published. Read-only token. Uploads the result.
@@ -20,6 +23,8 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      package: ${{ steps.which.outputs.package }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -32,11 +37,17 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      # The one version is the root package.json's: the package is packed with it (tools/pack.ts).
-      - name: The release tag matches the package version
+      - name: Which package the tag is for, and that its version matches the tag
+        id: which
         run: |
-          version=$(node -p "require('./package.json').version")
-          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME, package.json $version"; exit 1; }
+          case "$GITHUB_REF_NAME" in
+            docs-kit-v*) package=docs-kit; tag_version="${GITHUB_REF_NAME#docs-kit-v}" ;;
+            v*) package=pipis; tag_version="${GITHUB_REF_NAME#v}" ;;
+            *) echo "tag $GITHUB_REF_NAME is for no package (v1.2.3 is pipis, docs-kit-v1.2.3 is @pipis/docs-kit)"; exit 1 ;;
+          esac
+          version=$(node -p "require('./packages/$package/package.json').version")
+          [ "$tag_version" = "$version" ] || { echo "tag $GITHUB_REF_NAME, packages/$package/package.json $version"; exit 1; }
+          echo "package=$package" >> "$GITHUB_OUTPUT"
       - name: The tagged commit is on main
         run: |
           git fetch origin main
@@ -45,16 +56,17 @@ jobs:
       # What publish and assets will use, built here with a read-only token, so what was verified is what goes out.
       - name: Build the package
         run: |
-          node tools/pack.ts out/release
+          package=${{ steps.which.outputs.package }}
+          node packages/$package/tools/pack.ts out/release
           # The tarball goes on the release page as it is. Staging packs the folder again, so the folder alone goes to publish.
           mkdir -p out/assets
-          cp out/release/pipis/pipis-*.tgz out/assets/
-          rm -f out/release/pipis/*.tgz
+          cp out/release/$package/*.tgz out/assets/
+          rm -f out/release/$package/*.tgz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release
           path: |
-            out/release/pipis
+            out/release/${{ steps.which.outputs.package }}
             out/assets/*.tgz
           if-no-files-found: error
           retention-days: 7
@@ -82,14 +94,15 @@ jobs:
           path: out
       - name: Stage
         run: |
-          # A prerelease (0.1.0-beta.1) goes under its own tag, so `npm install pipis` stays on the last stable release.
+          # A prerelease (0.1.0-beta.1) goes under its own tag, so `npm install` of the package stays on the last stable release.
           #   1.0.0-beta.2 -> beta.2 -> beta (letters of the first part) | 1.0.0-2 -> 2 -> next (nothing left) | 1.0.0 -> latest
-          version=$(node -p "require('./out/release/pipis/package.json').version")
+          package=${{ needs.verify.outputs.package }}
+          version=$(node -p "require('./out/release/$package/package.json').version")
           case "$version" in *-*) tag=$(echo "${version#*-}" | cut -d. -f1 | tr -d '0-9') ; tag=${tag:-next} ;; *) tag=latest ;; esac
           [ "$tag" != latest ] || [ "$version" = "${version%%-*}" ] || { echo "a prerelease may not be called latest"; exit 1; }
           echo "staging $version with tag $tag"
-          (cd out/release/pipis && npm stage publish --tag "$tag" --access public)
-          echo "Staged. Approve the version on npmjs.com (Staged Packages), or: npm stage list pipis; npm stage approve <stage-id>" >> "$GITHUB_STEP_SUMMARY"
+          (cd out/release/$package && npm stage publish --tag "$tag" --access public)
+          echo "Staged. Approve the version on npmjs.com (Staged Packages), or: npm stage list; npm stage approve <stage-id>" >> "$GITHUB_STEP_SUMMARY"
 
   # The tarball on the release page, whether or not the npm version is approved yet.
   assets:

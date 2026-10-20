@@ -111,7 +111,7 @@ export function Article(props: { view: View }) {
 }
 ```
 
-On the server the view has `body`, and `serializeData(view)` writes it into the page without it; the browser reads the data back and hydrates `Article` with a view whose `body` is nothing, and takes the markup that the server wrote. What makes `body` is imported only by the server's code, so it is not in the browser's bundle. This documentation site is made so: [site/app.tsx](https://github.com/neofox-solutions/pipis/blob/main/site/app.tsx) is the page, once, and [site/docs.server.tsx](https://github.com/neofox-solutions/pipis/blob/main/site/docs.server.tsx) is what the server makes its text from (the Markdown, the highlighted code, the navigation), which the build replaces with a stub in the browser's script, so none of it is there.
+On the server the view has `body`, and `serializeData(view)` writes it into the page without it; the browser reads the data back and hydrates `Article` with a view whose `body` is nothing, and takes the markup that the server wrote. What makes `body` is imported only by the server's code, so it is not in the browser's bundle. This documentation site is made so: [apps/docs/src/app.tsx](https://github.com/neofox-solutions/pipis/blob/main/site/app.tsx) is the page, once, and [apps/docs/src/docs.server.tsx](https://github.com/neofox-solutions/pipis/blob/main/site/docs.server.tsx) is what the server makes its text from (the Markdown, the highlighted code, the navigation), which the build replaces with a stub in the browser's script, so none of it is there.
 
 ## Islands in text that is only read
 
@@ -130,7 +130,7 @@ if (container) {
 }
 ```
 
-An island that has content only the server makes takes it as a prop that is a function (`content`), which the server calls and the data it writes for the browser does not hold; the component puts it in a `Static`, and the browser takes what was written. Leave the `hydrate` line out and the same page is mounted as islands only, with the page's own components not in the script (and, with an ordinary build of the library, the islands made again in the browser: an island's content from the server then goes in a `Slot`, see [Islands](islands.md)). This documentation site is built both ways from one set of components (`vp build --config site/islands.config.ts`).
+An island that has content only the server makes takes it as a prop that is a function (`content`), which the server calls and the data it writes for the browser does not hold; the component puts it in a `Static`, and the browser takes what was written. Leave the `hydrate` line out and the same page is mounted as islands only, with the page's own components not in the script (and, with an ordinary build of the library, the islands made again in the browser: an island's content from the server then goes in a `Slot`, see [Islands](islands.md)). This documentation site is built both ways from one set of components (`vp build --config apps/docs/islands.config.ts`).
 
 ## What it costs
 

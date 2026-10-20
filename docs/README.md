@@ -42,4 +42,4 @@ A small front-end framework for JSX: no virtual DOM, no re-rendering, and a comp
 
 - [Writing documentation](authoring.md): how a code block becomes a live example, and what is checked.
 - [CONTRIBUTING](../CONTRIBUTING.md) and [RUNBOOKS](../RUNBOOKS.md).
-- [LLM.md](../LLM.md): the reference written for AI coding agents.
+- [LLM.md](../packages/pipis/LLM.md): the reference written for AI coding agents.

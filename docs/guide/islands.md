@@ -60,7 +60,7 @@ import { Counter } from './counter.tsx';
 mountIslands({ counter: Counter });
 ```
 
-`mountIslands` finds each marker, makes the component with the props it carries, and mounts it over what the server wrote. It returns what unmounts them all. This script is the whole of the page's code in the browser: it imports the islands, and the page's markup, its layout and anything that only made the page (a Markdown parser, a highlighter) are not in it, because nothing the browser runs imports them. That is checked: `tools/server.test.ts` builds a page with an island both ways and looks for the server's code in the browser's bundle.
+`mountIslands` finds each marker, makes the component with the props it carries, and mounts it over what the server wrote. It returns what unmounts them all. This script is the whole of the page's code in the browser: it imports the islands, and the page's markup, its layout and anything that only made the page (a Markdown parser, a highlighter) are not in it, because nothing the browser runs imports them. That is checked: `packages/pipis/tools/server.test.ts` builds a page with an island both ways and looks for the server's code in the browser's bundle.
 
 ## Content that only the server makes
 

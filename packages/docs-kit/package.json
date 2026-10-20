@@ -1,0 +1,58 @@
+{
+  "name": "@pipis/docs-kit",
+  "version": "0.1.0-beta.0",
+  "description": "A documentation site from a folder of Markdown, as a Vite plugin: live, editable examples, search, and pages that are files or are rendered by your server.",
+  "license": "MIT",
+  "author": "Neofox Solutions LLP and Hamish Milne",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neofox-solutions/pipis.git",
+    "directory": "packages/docs-kit"
+  },
+  "homepage": "https://github.com/neofox-solutions/pipis/tree/main/packages/docs-kit#readme",
+  "bugs": {
+    "url": "https://github.com/neofox-solutions/pipis/issues"
+  },
+  "keywords": [
+    "documentation",
+    "docs",
+    "vite",
+    "vite-plugin",
+    "markdown",
+    "ssg"
+  ],
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "exports": {
+    ".": "./src/vite.ts",
+    "./blocks": "./src/blocks.ts",
+    "./client/edit": "./src/client/edit.ts",
+    "./code": "./src/code.ts",
+    "./entities": "./src/entities.ts",
+    "./handler": "./src/handler.ts",
+    "./markdown": "./src/markdown.ts",
+    "./pages": "./src/pages.ts",
+    "./theme": "./src/theme.ts",
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "marked": "catalog:",
+    "pagefind": "catalog:",
+    "prism-code-editor": "catalog:",
+    "rolldown": "catalog:",
+    "sucrase": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": ">=8"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

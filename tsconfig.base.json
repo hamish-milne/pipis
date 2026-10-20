@@ -1,0 +1,20 @@
+{
+  // What the packages of the repository share. Each has a tsconfig.json that extends this and says what it includes.
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["es2015"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true
+  }
+}

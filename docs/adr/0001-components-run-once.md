@@ -18,4 +18,4 @@ changed, not to the size of the component.
 
 **Consequences.** Anything computed from state has to be a `select`, and structure that changes (show or hide, switch, lists) has to
 use `If`, `OneOf` and `List`. Reading `.value` while building JSX compiles and silently never updates, which is why `LLM.md` warns
-about it first (mistake 1). `src/types/llm.check.tsx` cannot catch it, because it is valid TypeScript.
+about it first (mistake 1). `packages/pipis/types/llm.check.tsx` cannot catch it, because it is valid TypeScript.

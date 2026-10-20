@@ -16,7 +16,7 @@ A `select` is cold: each subscriber computes its own copy, and nothing is shared
   it reads inside the callback does.
 - Two selects of one source are notified one after the other, so code that reads both can see one new and one old between the
   notifications. This is why there is no `combine`.
-- Three arguments, and several inputs, are type errors (`src/types/llm.check.tsx`).
+- Three arguments, and several inputs, are type errors (`packages/pipis/types/llm.check.tsx`).
 - A compute function that throws is reported to the error handler and the select keeps its last value (ADR 12).
 
 **Consequences.** Cold selects cannot share an expensive derived value. A list of N rows in which every row selects its own data from

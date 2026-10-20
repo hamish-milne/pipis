@@ -14,7 +14,7 @@ A collection of recipes for using other libraries with pipis: state libraries an
 - **It does not** (Zustand, Redux, XState): `adapt(source, () => source.getState())`. The function is called for the first value and again on every change, whatever the library passes to its listener.
 - **It has a different method** (Valtio, Jotai): `adapt({ subscribe }, current)`, with a `subscribe` that calls the callback with no arguments.
 
-The `adapt` call in each example below is run against the real library in `src/pipis/interop.test.ts`, which checks that the current value shows at once (including one set before mounting), that changes are followed, and that nothing stays subscribed once the element is removed.
+The `adapt` call in each example below is run against the real library in `packages/pipis/src/interop.test.ts`, which checks that the current value shows at once (including one set before mounting), that changes are followed, and that nothing stays subscribed once the element is removed.
 
 ### Zustand
 

@@ -10,7 +10,7 @@ object itself is not reactive.
 string building.
 
 **Evidence.** `core.test.ts`, "style": static properties are applied; each reactive property is bound on its own, follows its value,
-and is unsubscribed on unmount. `src/types/llm.check.tsx`: a number is a type error.
+and is unsubscribed on unmount. `packages/pipis/types/llm.check.tsx`: a number is a type error.
 
 **Consequences.** A change to one property writes only that property. Because the object is not reactive, switching between whole
 styles means a reactive per property, or a reactive class name.

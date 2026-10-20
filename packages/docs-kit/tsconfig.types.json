@@ -1,0 +1,15 @@
+{
+  // The declarations the package ships, one `.d.ts` per module of the kit. `tools/pack.ts` emits them; nothing else uses this.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "outDir": "out/types",
+    "rootDir": "src",
+    "allowImportingTsExtensions": false,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

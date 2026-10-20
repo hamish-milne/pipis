@@ -38,11 +38,13 @@ jobs:
         continue-on-error: true # a pull request from a fork has a read-only token and cannot comment
         with:
           file-coverage-mode: none
-      # The tarball a release would publish, so a packaging problem shows up on the pull request.
-      - run: node tools/pack.ts out/release
+      # The tarballs a release would publish, so a packaging problem shows up on the pull request.
+      - run: |
+          node packages/pipis/tools/pack.ts out/release
+          node packages/docs-kit/tools/pack.ts out/release
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: tarball
-          path: out/release/pipis/*.tgz
+          path: out/release/*/*.tgz
           if-no-files-found: error
           retention-days: 14

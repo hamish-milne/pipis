@@ -1,0 +1,66 @@
+{
+  "name": "pipis",
+  "version": "0.1.0",
+  "description": "A tiny JSX framework with no virtual DOM and no re-rendering: components run once and reactive values bind straight to DOM nodes.",
+  "license": "MIT",
+  "author": "Neofox Solutions LLP and Hamish Milne",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neofox-solutions/pipis.git",
+    "directory": "packages/pipis"
+  },
+  "homepage": "https://github.com/neofox-solutions/pipis#readme",
+  "bugs": {
+    "url": "https://github.com/neofox-solutions/pipis/issues"
+  },
+  "keywords": [
+    "jsx",
+    "reactive",
+    "ui",
+    "dom",
+    "no-virtual-dom",
+    "tiny"
+  ],
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24"
+  },
+  "imports": {
+    "#platform": {
+      "pipis-server": "./src/platform.server.ts",
+      "pipis-hydrate": "./src/platform.hydrate.ts",
+      "default": "./src/platform.client.ts"
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./server": "./src/server.ts",
+    "./islands": "./src/islands.ts",
+    "./hydrate": "./src/hydrate.ts",
+    "./package.json": "./package.json"
+  },
+  "devDependencies": {
+    "@preact/signals-core": "catalog:",
+    "@types/jsdom": "catalog:",
+    "@types/node": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "jotai": "catalog:",
+    "jsdom": "catalog:",
+    "nanostores": "catalog:",
+    "playwright": "catalog:",
+    "redux": "catalog:",
+    "rolldown": "catalog:",
+    "rxjs": "catalog:",
+    "svelte": "catalog:",
+    "typescript": "catalog:",
+    "valtio": "catalog:",
+    "vite-plus": "catalog:",
+    "xstate": "catalog:",
+    "zustand": "catalog:"
+  }
+}

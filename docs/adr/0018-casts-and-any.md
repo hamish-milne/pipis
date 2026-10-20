@@ -22,7 +22,7 @@ children in place of `flat`), and these are what is left. `Reflect.set` and `Ref
 rejected: they make the access no safer, they only avoid the lint rule, and `Reflect.set` returns `false` where an assignment would throw.
 
 **Evidence.** `vp lint` with `--deny-warnings --report-unused-disable-directives` is part of `all`, and the rule is on for every
-`src/pipis/*.ts` file that is not a test, so a new cast fails until it is either removed or given a reason. The byte figure above was measured with `tools/size.ts` by swapping each version in.
+`packages/pipis/src/*.ts` file that is not a test, so a new cast fails until it is either removed or given a reason. The byte figure above was measured with `packages/pipis/tools/size.ts` by swapping each version in.
 
 **Consequences.** Where a cast costs nothing and the typed version costs bytes in the core, the cast wins, because the core is what
 every app pays for. Non-null assertions (`x!`) are forbidden with no opt-outs in the library.

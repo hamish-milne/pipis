@@ -38,7 +38,7 @@ not shared (ADR 2). Giving each row its own reactive item removes the search, an
   the same as a `List` built fresh from the same items.
 - `assumptions.test.ts`, "ADR 4": a `List` row that reads its item goes stale when the item changes (`LLM.md` mistake 11), and the ids
   pattern updates only the changed row.
-- `leaks.test.ts` and the "ADR 11" stress test include both. `src/types/llm.check.tsx`: a `ReactiveList` row's item is a Reactive, so
+- `leaks.test.ts` and the "ADR 11" stress test include both. `packages/pipis/types/llm.check.tsx`: a `ReactiveList` row's item is a Reactive, so
   `product.name` is a type error.
 
 **Consequences.** `List` is 331 bytes gzipped on top of the counter app and `ReactiveList` 355 (the `reactive` per row). Sharing the code

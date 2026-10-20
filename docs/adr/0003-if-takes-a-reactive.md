@@ -9,7 +9,7 @@ is correct only for a value that never changes after construction.
 **Why.** A plain boolean would be read once and never update, which is the most common mistake this design invites (ADR 1). Making the
 type strict turns the mistake into a compile error at the place it is made.
 
-**Evidence.** `src/types/llm.check.tsx`: `<If condition={show.value}>` is a type error under `@ts-expect-error`; `If` with a reactive
+**Evidence.** `packages/pipis/types/llm.check.tsx`: `<If condition={show.value}>` is a type error under `@ts-expect-error`; `If` with a reactive
 works, and `select(x, (e) => e !== '')` works as a condition. `dynamic.test.ts`, "If": shows and hides, keeps the same child nodes
 across toggles, runs child cleanups. A toggle of a small subtree costs about 0.8 µs.
 

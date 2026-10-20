@@ -1,138 +1,36 @@
-// One configuration for the toolchain (Vite+): the site build, the task runner, and Oxlint's and Oxfmt's settings.
+// The toolchain's settings for the whole repository (Vite+): the formatter and the linter, and the tasks that run every package's own. Each package has a
+// vite.config.ts of its own for what is particular to it (tests, builds), and its own tasks; `all` is what CI runs.
 import { defineConfig } from 'vite-plus';
-import { playwright } from 'vite-plus/test/browser-playwright';
-import { docsSite } from './site/vite-plugin.ts';
-
-// Tests that need `pipis` to be the server's, or the hydrating one: they run in their own projects.
-const SERVER_ONLY = ['**/node_modules/**', '**/*.server.test.*', '**/*.hydrate.test.*'];
 
 export default defineConfig({
-  // The documentation site: `vp dev` serves it (and reloads on a change), `vp build` writes it into dist/ (site/vite-plugin.ts).
-  plugins: [docsSite({ render: 'islands', pages: 'separate' })],
-  test: {
-    // Each project says what it runs: an `include` here would be merged into both.
-    // A fresh process per file, so a test that leaves a subscriber or a DOM node behind cannot colour the next one.
-    pool: 'forks',
-    isolate: true,
-    setupFiles: ['src/test/setup.ts'],
-    coverage: {
-      provider: 'v8',
-      include: ['src/pipis/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**'],
-      reporter: ['text-summary', 'json-summary', 'json', 'html'],
-      reportsDirectory: 'coverage',
-      reportOnFailure: true,
-    },
-    maxWorkers: process.env.CI ? 2 : undefined,
-    retry: process.env.CI ? 1 : 0,
-    reporters: process.env.CI ? ['default', 'github-actions'] : ['default'],
-    // The DOM tests run twice: in jsdom, which is fast, and in Chromium, which is what the library is for. A test that only
-    // makes sense in a real browser (jsdom has no MathML, for one) checks `realBrowser` from `src/test/dom.ts` and skips itself.
-    projects: [
-      {
-        extends: true,
-        test: {
-          name: 'jsdom',
-          environment: 'jsdom',
-          include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.{ts,mjs}'],
-          exclude: SERVER_ONLY,
-        },
-      },
-      // Server rendering is tested with `pipis` as the server's platform: the condition is what the bundler is given (docs/adr/0019).
-      // No DOM: the server has none, and a test that reaches for `document` should fail.
-      {
-        extends: true,
-        resolve: { conditions: ['pipis-server'] },
-        ssr: { resolve: { conditions: ['pipis-server'] } },
-        test: {
-          name: 'server',
-          environment: 'node',
-          setupFiles: [],
-          include: ['src/**/*.server.test.{ts,tsx}', 'site/**/*.server.test.{ts,tsx}'],
-        },
-      },
-      // Hydration is tested with `pipis` as the hydrating platform, in a DOM: the condition is what a browser's bundle is given (docs/adr/0021).
-      {
-        extends: true,
-        resolve: { conditions: ['pipis-hydrate'] },
-        test: {
-          name: 'hydrate',
-          environment: 'jsdom',
-          include: ['src/**/*.hydrate.test.{ts,tsx}'],
-        },
-      },
-      // The documentation kit and the site: Node tests (the site test starts its own Chromium), with no DOM of their own.
-      {
-        extends: true,
-        test: {
-          name: 'site',
-          environment: 'node',
-          setupFiles: [],
-          include: ['docs-kit/**/*.test.ts', 'site/**/*.test.ts'],
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: 'chromium',
-          include: ['src/**/*.test.{ts,tsx}'],
-          exclude: SERVER_ONLY,
-          browser: {
-            enabled: true,
-            headless: true,
-            provider: playwright({
-              // Playwright's own download is not always available (a sandbox, for one); point this at any Chromium instead.
-              launchOptions: process.env.PIPIS_CHROMIUM ? { executablePath: process.env.PIPIS_CHROMIUM } : {},
-            }),
-            instances: [{ browser: 'chromium' }],
-          },
-        },
-      },
-    ],
-  },
   run: {
-    // `vp run all` is everything CI runs. Tasks that write files are not cached.
+    // `vp run all` is everything CI runs: the repository's checks, and each package's. Tasks that write files are not cached.
     tasks: {
-      // Everything, then the library alone against the platform floor (ES2021 built-ins, no Node types).
-      check: { command: ['tsc -p .', 'tsc -p tsconfig.lib.json'] },
       lint: { command: 'vp lint --deny-warnings --report-unused-disable-directives' },
       fmt: { command: 'vp fmt', cache: false },
       'fmt:check': { command: 'vp fmt --check' },
-      // The DOM tests run in jsdom and in Chromium (see `test.projects`); coverage is recorded on every run.
-      test: { command: 'vp test run src/ --coverage', cache: false },
-      // The import graph is held to its layers, so a feature cannot become a cost of everything.
-      deps: { command: 'vp test run tools/deps.test.ts' },
-      // The documentation's code is compiled, every live example is run, links are followed, and the generated reference is current.
-      docs: { command: 'vp test run tools/docs.test.ts', cache: false },
-      // The tarball a release publishes: built, installed into a clean project, type-checked there and run.
-      'pack:test': { command: 'vp test run tools/pack.test.ts', cache: false },
       actions: { command: 'node tools/actions.ts check' },
-      // What each feature costs an app, against the committed baseline. `size` prints the table.
-      size: { command: 'node tools/size.ts', cache: false },
-      'size:check': { command: 'node tools/size.ts --check', cache: false },
-      // The documentation site, into dist/. `node site/serve.ts` serves it, and `vp dev` serves it with reloading.
-      build: { command: 'vp build', cache: false },
-      // The site is built under a path of its own and used in Chromium: every page opened, every example run, one edited, the search used.
-      // The kit's tests, the Markdown component (rendered as a server renders it, over every page of the docs), and the site itself.
-      'site:test': { command: 'vp test run docs-kit/ site/', cache: false },
-      // The server's markup is the browser build's: the same components rendered both ways and compared (tools/server.test.ts).
-      'server:test': { command: 'vp test run tools/server.test.ts', cache: false },
       all: {
         command: 'echo all green',
         cache: false,
         dependsOn: [
-          'check',
           'lint',
           'fmt:check',
-          'test',
-          'deps',
-          'docs',
           'actions',
-          'size:check',
-          'pack:test',
-          'build',
-          'site:test',
-          'server:test',
+          'pipis#check',
+          'pipis#test',
+          'pipis#deps',
+          'pipis#api',
+          'pipis#size:check',
+          'pipis#pack:test',
+          'pipis#server:test',
+          '@pipis/docs-kit#check',
+          '@pipis/docs-kit#test',
+          '@pipis/docs-kit#pack:test',
+          '@pipis/docs#check',
+          '@pipis/docs#docs',
+          '@pipis/docs#build',
+          '@pipis/docs#site:test',
         ],
       },
     },
@@ -141,15 +39,15 @@ export default defineConfig({
     printWidth: 140,
     singleQuote: true,
     ignorePatterns: [
-      'dist/**',
-      'out/**',
-      'coverage/**',
-      'node_modules/**',
+      '**/dist/**',
+      '**/out/**',
+      '**/coverage/**',
+      '**/node_modules/**',
       'pnpm-lock.yaml',
-      // Written by tools/reflect.ts from jsdom.
-      'src/pipis/reflect.ts',
+      // Written by packages/pipis/tools/reflect.ts from jsdom.
+      'packages/pipis/src/reflect.ts',
       // LLM.md is written for models, with hand-aligned tables that the formatter would reflow.
-      'LLM.md',
+      'packages/pipis/LLM.md',
       '**/*.md',
       '**/*.json',
       '**/*.yml',
@@ -165,7 +63,7 @@ export default defineConfig({
       correctness: 'error',
       suspicious: 'warn',
     },
-    ignorePatterns: ['dist/**', 'out/**', 'coverage/**', 'node_modules/**'],
+    ignorePatterns: ['**/dist/**', '**/out/**', '**/coverage/**', '**/node_modules/**'],
     rules: {
       'typescript/no-explicit-any': 'error',
       'typescript/ban-ts-comment': [
@@ -194,19 +92,19 @@ export default defineConfig({
       // and sees nothing. TypeScript knows the library's globals; everything else is given them here.
       {
         files: [
-          'src/test/**',
-          'src/samples/**',
-          'src/pipis/*.test.ts',
-          'src/pipis/*.test.tsx',
+          'packages/pipis/test/**',
+          'packages/pipis/src/*.test.ts',
+          'packages/pipis/src/*.test.tsx',
+          'packages/pipis/tools/**',
+          'packages/docs-kit/**',
+          'apps/docs/**',
           'tools/**',
-          'docs-kit/**',
-          'site/**',
-          '*.ts',
+          '**/*.config.ts',
         ],
         env: { browser: true, node: true, es2022: true },
       },
       {
-        files: ['src/pipis/*.ts'],
+        files: ['packages/pipis/src/*.ts'],
         rules: {
           'baseline-js/use-baseline': [
             'error',
@@ -232,7 +130,7 @@ export default defineConfig({
         },
       },
       {
-        files: ['src/pipis/*.test.ts'],
+        files: ['packages/pipis/src/*.test.ts'],
         rules: { 'baseline-js/use-baseline': 'off', 'typescript/consistent-type-assertions': 'off' },
       },
     ],

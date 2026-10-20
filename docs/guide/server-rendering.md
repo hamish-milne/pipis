@@ -79,7 +79,7 @@ Other tools are given the same condition:
 
 Everything else is the browser's by default, so a plain Node script, a test in jsdom and an ordinary browser bundle need no setting. If a server build is missing the condition, the first element it renders throws `document is not defined`, and `renderToString` itself says which setting is missing. It never renders the wrong thing without saying.
 
-For a static site, render each page and write the file. This is how this site is built (the build, in `docs-kit/vite.ts` in the repository, renders each page with the site's `render` and writes it):
+For a static site, render each page and write the file. This is how this site is built (the build, in `packages/docs-kit/src/vite.ts` in the repository, renders each page with the site's `render` and writes it):
 
 ```ts
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -109,7 +109,7 @@ The server has no screen, so what is for a screen does not run:
 | The state of a form control (`value`, `checked`, `selected`) | Written as the attribute a page starts from, and a `textarea`'s value as its content |
 | A prop that is given nothing (`null` or `undefined`) | The attribute is left out, as it is in the browser's build. (`false` is a value: `draggable={false}` is `draggable="false"`.) |
 
-The markup is what the browser's build makes: an HTML tag is HTML, any other tag is SVG, `className` is `class`, `htmlFor` is `for`, a `style` is its declarations, and text and attributes are escaped. `tools/server.test.ts` renders the same components both ways, with the browser's build in jsdom, and compares the markup, including every live example of this documentation.
+The markup is what the browser's build makes: an HTML tag is HTML, any other tag is SVG, `className` is `class`, `htmlFor` is `for`, a `style` is its declarations, and text and attributes are escaped. `packages/pipis/tools/server.test.ts` renders the same components both ways, with the browser's build in jsdom, and compares the markup, including every live example of this documentation.
 
 ## Code that is only for the browser
 
@@ -203,7 +203,7 @@ export async function page(): Promise<string> {
 
 In the browser, `Posts()(container)` reads the data from the page and builds the same list. Things the recipe leans on, and what to know:
 
-- **The guard is at the call.** `!IS_CLIENT && (() => ...)` is the whole trick: `IS_CLIENT` is a constant, so in the browser's build the argument is `false` and the function, and whatever it imports, is gone; and inside `data` the browser's branch and the server's are each removed from the other's build. The check that the bundler does this is in `tools/server.test.ts`, which builds the recipe both ways.
+- **The guard is at the call.** `!IS_CLIENT && (() => ...)` is the whole trick: `IS_CLIENT` is a constant, so in the browser's build the argument is `false` and the function, and whatever it imports, is gone; and inside `data` the browser's branch and the server's are each removed from the other's build. The check that the bundler does this is in `packages/pipis/tools/server.test.ts`, which builds the recipe both ways.
 - **The data is JSON.** What comes back in the browser is what `JSON.parse` makes: a `Date` is a string, and a `Map` is lost. Send plain data. The function does not check the shape in the browser; a parser such as zod, given as another argument, is the place for that.
 - **Fetching is the server's, before the render.** A render is synchronous (a component cannot `await`), so what a component asks for has to be there already: fetch it first and hand it over, here with a context. A context is read when a component is made, and the rows of a `List` are made during the render, so the provider wraps the render and not only the call that makes the element.
 - **Ids are unique.** Two calls with one id throw on the server, and a missing script throws in the browser, naming it.

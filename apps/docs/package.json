@@ -1,0 +1,36 @@
+{
+  "name": "@pipis/docs",
+  "version": "0.0.0",
+  "description": "The pipis documentation site: the Markdown of docs/ built by @pipis/docs-kit, as a pipis app.",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "pipis": "workspace:*"
+  },
+  "devDependencies": {
+    "@fontsource-variable/inter": "catalog:",
+    "@fontsource-variable/jetbrains-mono": "catalog:",
+    "@pipis/docs-kit": "workspace:*",
+    "@preact/signals-core": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "@types/jsdom": "catalog:",
+    "@types/node": "catalog:",
+    "chart.js": "catalog:",
+    "highlight.js": "catalog:",
+    "jotai": "catalog:",
+    "jsdom": "catalog:",
+    "marked": "catalog:",
+    "nanostores": "catalog:",
+    "playwright": "catalog:",
+    "redux": "catalog:",
+    "rolldown": "catalog:",
+    "rxjs": "catalog:",
+    "svelte": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "catalog:",
+    "valtio": "catalog:",
+    "vite-plus": "catalog:",
+    "xstate": "catalog:",
+    "zustand": "catalog:"
+  }
+}
