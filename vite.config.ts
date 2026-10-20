@@ -4,8 +4,8 @@ import { playwright } from 'vite-plus/test/browser-playwright';
 import tailwindcss from '@tailwindcss/vite';
 import { docsSite } from './site/vite-plugin.ts';
 
-// Tests that need `pipis` to be the server's: they run in their own project.
-const SERVER_ONLY = ['**/node_modules/**', '**/*.server.test.*'];
+// Tests that need `pipis` to be the server's, or the hydrating one: they run in their own projects.
+const SERVER_ONLY = ['**/node_modules/**', '**/*.server.test.*', '**/*.hydrate.test.*'];
 
 export default defineConfig({
   // The documentation site: `vp dev` serves it (and reloads on a change), `vp build` writes it into dist/ (site/vite-plugin.ts).
@@ -51,6 +51,16 @@ export default defineConfig({
           environment: 'node',
           setupFiles: [],
           include: ['src/**/*.server.test.{ts,tsx}', 'site/**/*.server.test.{ts,tsx}'],
+        },
+      },
+      // Hydration is tested with `pipis` as the hydrating platform, in a DOM: the condition is what a browser's bundle is given (docs/adr/0021).
+      {
+        extends: true,
+        resolve: { conditions: ['pipis-hydrate'] },
+        test: {
+          name: 'hydrate',
+          environment: 'jsdom',
+          include: ['src/**/*.hydrate.test.{ts,tsx}'],
         },
       },
       // The documentation kit and the site: Node tests (the site test starts its own Chromium), with no DOM of their own.

@@ -11,6 +11,12 @@ export interface Platform {
   /** Whether the code runs in a browser: a constant on each platform, so a branch that is not taken is removed from the bundle. */
   readonly IS_CLIENT: boolean;
 
+  /** Whether the code runs on a server: the other side of `IS_CLIENT`. */
+  readonly IS_SERVER: boolean;
+
+  /** Whether a page that a server wrote is adopted as it is mounted: a browser's platform that hydrates. */
+  readonly IS_HYDRATE: boolean;
+
   /** A text node that follows a reactive value. */
   textNode(content: Content | Reactive<Content>): JSXElement;
 

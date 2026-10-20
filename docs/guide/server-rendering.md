@@ -210,7 +210,7 @@ In the browser, `Posts()(container)` reads the data from the page and builds the
 
 ## The browser's side
 
-The browser does not adopt the server's markup. It mounts the component into the page itself, which replaces what the server wrote, so a page is complete and readable before the script runs, and then the script takes over. (A page that is mostly not interactive can do this for only the parts that are: see [Islands](islands.md).) Mount the client's copy with the same data the server was given:
+By default the browser does not adopt the server's markup (to adopt it, see [Hydration](hydration.md)). It mounts the component into the page itself, which replaces what the server wrote, so a page is complete and readable before the script runs, and then the script takes over. (A page that is mostly not interactive can do this for only the parts that are: see [Islands](islands.md).) Mount the client's copy with the same data the server was given:
 
 ```tsx check title="Mounting in the browser over the server's markup"
 import { reactive } from 'pipis';

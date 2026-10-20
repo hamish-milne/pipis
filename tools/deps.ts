@@ -16,20 +16,26 @@ const dir = join(dirname(fileURLToPath(import.meta.url)), '../src/pipis');
  *
  * `#platform` is what the nodes are made with: the browser's `platform.client`, or `platform.server` when the bundler is told it is a
  * server (see docs/adr/0019-server-rendering.md). It is an import of the package itself, so it is named here as it is written. Nothing
- * but `core`, `dynamic` and `server` may use it, and the two platforms may not use each other, so that neither is in the other's bundle.
+ * but `core`, `dynamic`, `server`, `islands` and `hydrate` may use it, and the platforms may not use each other, so that none is in another's bundle.
+ * What only the hydrating platform has (finding the nodes of a page that a server wrote) is reached through `hydrated`, which is not a choice of platform but a
+ * seam that `IS_HYDRATE`, a constant, removes from the other builds (docs/adr/0021-hydration.md); `hydrate` is the entry point that runs it.
  */
 export const LIBRARY: Record<string, string[]> = {
   base: [],
   internal: [],
-  'platform.client': ['base', 'internal'],
+  dom: ['base', 'internal'],
+  'platform.client': ['dom'],
   'platform.server': ['base', 'internal', 'reflect'],
+  'platform.hydrate': ['base', 'internal', 'dom'],
+  hydrated: ['base', 'platform.hydrate'],
   reflect: [],
-  core: ['base', '#platform'],
+  core: ['base', 'hydrated', '#platform'],
   reactive: ['base'],
-  dynamic: ['base', 'core', 'reactive', '#platform'],
+  dynamic: ['base', 'core', 'hydrated', 'reactive', '#platform'],
   serialize: [],
   server: ['#platform', 'platform.server', 'serialize'],
   islands: ['core', 'serialize', '#platform'],
+  hydrate: ['#platform', 'dynamic', 'hydrated', 'platform.hydrate'],
   'jsx-runtime': ['core'],
   'jsx-dev-runtime': ['jsx-runtime', 'core'],
 };
@@ -44,7 +50,7 @@ export const TYPES_ONLY = ['svg', 'platform'];
 export const BARREL = 'index';
 
 /** The entry points of the package: what `exports` in package.json names, so what a user can import. */
-export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime', 'server', 'islands'];
+export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime', 'server', 'islands', 'hydrate'];
 
 const moduleName = (file: string) => file.replace(/\.tsx?$/, '');
 

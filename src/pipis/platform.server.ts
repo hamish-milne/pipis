@@ -13,6 +13,12 @@ import { HTML_TAGS, RAW_TEXT_TAGS, REFLECTED, VOID_TAGS } from './reflect.ts';
 /** Whether the code runs in a browser: `false` here, a constant, so what is only for a browser is removed from the server's build. */
 export const IS_CLIENT: boolean = false;
 
+/** Whether the code runs on a server: `true` here, a constant. */
+export const IS_SERVER: boolean = true;
+
+/** Whether a page that a server wrote is being adopted: never on a server. */
+export const IS_HYDRATE: boolean = false;
+
 class ServerNode {
   parentNode: ServerParent | null = null;
   nextSibling: ServerNode | null = null;
@@ -277,22 +283,28 @@ function openTag(el: ServerElement): string {
 }
 
 /** The markup of a node's children. */
-function serialize(parent: ServerParent): string {
-  const raw = parent instanceof ServerElement && !parent.svg && RAW_TEXT.has(parent.tag);
+function serialize(parent: ServerParent, hydratable: boolean): string {
+  const html = parent instanceof ServerElement && !parent.svg;
+  const raw = html && RAW_TEXT.has(parent.tag);
+  // A comment in the text of `title` or `textarea`, or of a script or a style, is text: there the browser is not told where a text node begins.
+  const markers = hydratable && !(html && (raw || parent.tag === 'title' || parent.tag === 'textarea'));
   let out = '';
   for (let node = parent.firstChild; node; node = node.nextSibling) {
     if (node instanceof ServerText) {
+      // Hydratable markup says where each text node begins, so that the browser's text nodes, which merge when they are next to each other,
+      // can be told apart, and a text node that is empty (and so not there) can be told from none.
+      if (markers) out += '<!--t-->';
       // A parser drops a newline that starts a `pre`, `textarea` or `listing`, so one that is the text's own has to be written twice.
-      const first =
-        node === parent.firstChild && parent instanceof ServerElement && !parent.svg && /^(?:pre|textarea|listing)$/.test(parent.tag);
+      const first = !markers && node === parent.firstChild && html && /^(?:pre|textarea|listing)$/.test(parent.tag);
       out += (first && node.data[0] === '\n' ? '\n' : '') + (raw ? node.data : escapeText(node.data));
     } else if (node instanceof ServerComment) {
-      out += `<!--${node.data}-->`;
+      // The end of a region (see `dynamic`) is only for the browser that hydrates.
+      if (hydratable || node.data !== '/') out += `<!--${node.data}-->`;
     } else if (node instanceof ServerRaw) {
       out += node.html;
     } else if (node instanceof ServerElement) {
       out += openTag(node);
-      if (node.svg || !VOID.has(node.tag)) out += serialize(node) + `</${node.tag}>`;
+      if (node.svg || !VOID.has(node.tag)) out += serialize(node, hydratable) + `</${node.tag}>`;
     }
   }
   return out;
@@ -302,7 +314,7 @@ function serialize(parent: ServerParent): string {
  * Mounts an element into a fresh root, reads off its markup and that of the head `Helmet` filled, and unmounts it again, so that nothing
  * it subscribed to is left holding a node. The `pipis/server` entry point is what calls this. @internal
  */
-export function renderRoot(element: JSXElement): { html: string; head: string } {
+export function renderRoot(element: JSXElement, hydratable: boolean): { html: string; head: string } {
   if (current)
     throw new Error(
       'renderToString was called while another render was in progress: a render is synchronous, so do not await in a component.',
@@ -312,7 +324,9 @@ export function renderRoot(element: JSXElement): { html: string; head: string } 
   const root = new ServerElement('div', false);
   try {
     element(asDom(root));
-    return { html: serialize(root), head: serialize(state.head) };
+    const head = serialize(state.head, hydratable);
+    // The head that a page's components wrote is marked, so that the browser that hydrates can take it out: it makes its own.
+    return { html: serialize(root, hydratable), head: hydratable && head ? `<!--h-->${head}<!--/h-->` : head };
   } finally {
     try {
       element();

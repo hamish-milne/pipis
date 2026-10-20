@@ -15,7 +15,8 @@ import {
   subscribe,
 } from './base.ts';
 import type { PropBag, PropValue } from './internal.ts';
-import { IS_CLIENT, createNode, setAttribute, textNode } from '#platform';
+import { IS_CLIENT, IS_HYDRATE, createNode, setAttribute, textNode } from '#platform';
+import { hydratedElement } from './hydrated.ts';
 
 /** A {@link JSXElement} that renders nothing; on mount, returns `sibling` unchanged. */
 export const emptyElement: JSXElement = (parent, sibling = null) => sibling;
@@ -116,6 +117,8 @@ export function createElement<T extends keyof CoreIntrinsicElements>(type: T, pr
 // The implementation reads the props by name, and which element it makes depends on the tag at run time, so there is nothing narrower
 // to say here than the DOM's own `Element`: the overload above is the typed face of it.
 export function createElement(type: string, props: PropBag): JSXElement {
+  // Where a page that a server wrote is hydrated, the element is made when it is mounted, from the node that is there.
+  if (IS_HYDRATE) return hydratedElement(type, props, Fragment(props));
   const element = createNode(type);
   const bindings: BindingEntry[] = [];
 

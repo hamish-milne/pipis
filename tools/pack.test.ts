@@ -227,9 +227,10 @@ describe('the tarball', () => {
     const manifest = JSON.parse(read('package.json'));
     const files = listing();
     expect(Object.keys(manifest.imports)).toEqual(['#platform']);
-    expect(Object.keys(manifest.imports['#platform'])).toEqual(['pipis-server', 'default']);
+    expect(Object.keys(manifest.imports['#platform'])).toEqual(['pipis-server', 'pipis-hydrate', 'default']);
     expect(manifest.imports['#platform'].default.default).toBe('./dist/platform.client.js');
     expect(manifest.imports['#platform']['pipis-server'].default).toBe('./dist/platform.server.js');
+    expect(manifest.imports['#platform']['pipis-hydrate'].default).toBe('./dist/platform.hydrate.js');
     for (const choice of Object.values<{ types: string; default: string }>(manifest.imports['#platform'])) {
       for (const target of [choice.types, choice.default]) expect(files.has(target.replace(/^\.\//, '')), target).toBe(true);
     }

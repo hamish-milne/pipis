@@ -30,6 +30,7 @@
   "imports": {
     "#platform": {
       "pipis-server": "./src/pipis/platform.server.ts",
+      "pipis-hydrate": "./src/pipis/platform.hydrate.ts",
       "default": "./src/pipis/platform.client.ts"
     }
   },
@@ -38,7 +39,8 @@
     "./jsx-runtime": "./src/pipis/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/pipis/jsx-dev-runtime.ts",
     "./server": "./src/pipis/server.ts",
-    "./islands": "./src/pipis/islands.ts"
+    "./islands": "./src/pipis/islands.ts",
+    "./hydrate": "./src/pipis/hydrate.ts"
   },
   "devDependencies": {
     "@preact/signals-core": "catalog:",

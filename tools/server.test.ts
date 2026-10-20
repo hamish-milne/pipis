@@ -95,7 +95,7 @@ describe('what the server needs to know about HTML', () => {
       Reflect.set(el, prop, value);
       const node = createNode(tag);
       setAttribute(node, prop, value);
-      const { html } = renderRoot((parent) => (parent?.insertBefore(node, null), null));
+      const { html } = renderRoot((parent) => (parent?.insertBefore(node, null), null), false);
       const expected = el.outerHTML;
       if (html !== expected) wrong.push(`<${tag}> ${prop}=${String(value)}: ${html} is not ${expected}`);
     }

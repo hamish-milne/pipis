@@ -32,3 +32,4 @@ compare ratios, not the absolute figures.
 | [18](0018-casts-and-any.md)                | Casts and `any` in the library are owned in writing                         |
 | [19](0019-server-rendering.md)             | The server is another build of `pipis`, chosen by the bundler               |
 | [20](0020-islands.md)                      | Islands are mounted over the server's markup                                |
+| [21](0021-hydration.md)                    | Hydration is a platform, and adopts the server's nodes as they are mounted |

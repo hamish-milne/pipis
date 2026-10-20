@@ -11,8 +11,28 @@ import {
   type ChildrenProp,
 } from './base.ts';
 import { Fragment } from './core.ts';
-import { IS_CLIENT, createMarker, head } from '#platform';
+import { IS_CLIENT, IS_HYDRATE, IS_SERVER, createMarker, head } from '#platform';
+import { claimRegion, defer, hydrating, plain } from './hydrated.ts';
 import { getErrorHandler, handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive.ts';
+
+/**
+ * `subscribeWithCatch` for what a region's content is chosen by. While a page is hydrated its nodes are being found, so a region that changes what
+ * it shows then (because a component wrote to state that it follows) would move nodes under the search: that is refused. What its own first
+ * call, or its own children, do is part of its mounting, and is allowed (an `ErrorBoundary` shows its fallback that way).
+ */
+function subscribeWhileHydrating<T>(source: Reactive<T>, callback: (value: T) => void): Cleanup {
+  let mounted = false;
+  const cleanup = subscribeWithCatch(source, function region_value(value) {
+    if (mounted && hydrating()) {
+      throw new Error(
+        'A region (If, OneOf, List, ReactiveList or Dynamic) changed what it shows while the page was being hydrated. State that decides what is shown may not be written as the page is made or mounted: set it in an Effect, which runs when the page is whole.',
+      );
+    }
+    callback(value);
+  });
+  mounted = true;
+  return cleanup;
+}
 
 type MountFn = (parent: Exclude<JSXParent, undefined>, sibling: JSXSibling) => Cleanup | void;
 /**
@@ -28,18 +48,29 @@ type MountFn = (parent: Exclude<JSXParent, undefined>, sibling: JSXSibling) => C
  * safe even if the returned element's mount function is invoked again with the same parent.
  */
 export function dynamic(mount: MountFn, unmount: Cleanup): JSXElement {
-  const marker = createMarker();
+  let marker = createMarker();
+  // A server writes where a region ends as well as where it begins, for a browser that hydrates to find the whole of it.
+  const end = IS_SERVER ? createMarker('/') : undefined;
   let cleanup: Cleanup | void;
   let nextSibling: JSXSibling = null;
   return function Dynamic_element(parent, sibling = null) {
+    // The first mount while a page is hydrated: the region is the one the server wrote, found by its markers, and what is mounted adopts its nodes.
+    if (IS_HYDRATE && parent && !marker.parentNode && hydrating()) {
+      const region = claimRegion(parent, sibling, marker, mount);
+      marker = region.marker;
+      cleanup = region.cleanup;
+      nextSibling = sibling;
+      return marker;
+    }
     // Manually track the sibling here because the mount function adds additional nodes,
     // so the marker's DOM sibling isn't the same as the element's sibling.
     // The sibling is only given to moveNode when it has changed: once content is mounted the marker's own next node is that content,
     // not the sibling, so comparing against it would move the marker, and remount everything, on every call.
     if (moveNode(marker, parent, sibling !== nextSibling ? sibling : undefined) || sibling !== nextSibling) {
       cleanup?.();
+      if (end) moveNode(end, parent, sibling);
       if (parent) {
-        cleanup = mount(parent, sibling);
+        cleanup = mount(parent, end ?? sibling);
       } else {
         cleanup = undefined;
         unmount();
@@ -66,7 +97,7 @@ function keyedRows<T>(
 ): JSXElement {
   const rows = new Map<PropertyKey, Row<T>>();
   const mountRows: MountFn = (parent, sibling) =>
-    subscribeWithCatch(items, function List_items(newItems) {
+    (IS_HYDRATE ? subscribeWhileHydrating : subscribeWithCatch)(items, function List_items(newItems) {
       const entries = newItems.map((item, index) => ({ item, index, key: itemKey(item, index) }));
       // A Set, not an array: looking each rendered key up in an array makes every update cost rows x rows.
       const keys = new Set(entries.map((entry) => entry.key));
@@ -151,7 +182,7 @@ export function OneOf<T extends PropertyKey>({
 }): JSXElement {
   let current: JSXElement | undefined;
   const OneOf_mount: MountFn = (parent, sibling) =>
-    subscribeWithCatch(selector, function OneOf_value(newValue) {
+    (IS_HYDRATE ? subscribeWhileHydrating : subscribeWithCatch)(selector, function OneOf_value(newValue) {
       current?.();
       current = children[newValue];
       if (current && parent) {
@@ -173,7 +204,7 @@ export function If({
 } & ChildrenProp) {
   const children = Fragment(props);
   const If_mount: MountFn = (parent, sibling) =>
-    subscribeWithCatch(condition, function If_value(newValue) {
+    (IS_HYDRATE ? subscribeWhileHydrating : subscribeWithCatch)(condition, function If_value(newValue) {
       if (newValue) {
         children(parent, sibling);
       } else {
@@ -193,7 +224,7 @@ export function If({
 export function Dynamic<T>({ value, children }: { value: Reactive<T>; children: (props: T) => JSXElement }): JSXElement {
   let current: JSXElement | undefined;
   const Dynamic_mount: MountFn = (parent, sibling) =>
-    subscribeWithCatch(value, function Dynamic_value(newValue) {
+    (IS_HYDRATE ? subscribeWhileHydrating : subscribeWithCatch)(value, function Dynamic_value(newValue) {
       current?.();
       current = children(newValue);
       if (current && parent) {
@@ -213,7 +244,16 @@ const EMPTY_CLEANUP: Cleanup = () => {};
 export function effect(fn: () => Cleanup | undefined): JSXElement {
   let cleanup: Cleanup | undefined;
   return function Effect_element(parent, sibling = null) {
-    if (parent) {
+    if (IS_HYDRATE && parent && hydrating()) {
+      // It runs when the page is whole, for the boundary it is mounted under now.
+      if (!cleanup) {
+        cleanup = EMPTY_CLEANUP;
+        const run = handleError(fn);
+        defer(() => {
+          cleanup = run() ?? EMPTY_CLEANUP;
+        });
+      }
+    } else if (parent) {
       // Wrapped here, at mount, so that it reports to the ErrorBoundary it is mounted under (it was built before that existed).
       // An effect is for the browser: on a server nothing runs it, and `IS_CLIENT` being a constant removes this test from a browser's build.
       cleanup ??= IS_CLIENT ? (handleError(fn)() ?? EMPTY_CLEANUP) : EMPTY_CLEANUP;
@@ -391,7 +431,9 @@ export function Helmet(props: ChildrenProp): JSXElement {
     if (parent && !mounted) {
       const target = head();
       // This ensures new Helmet children are inserted at the beginning, so they take priority.
-      children(target, target.firstChild);
+      // The head the server wrote is taken out when a page is hydrated, so these are made, not adopted.
+      if (IS_HYDRATE) plain(() => children(target, target.firstChild));
+      else children(target, target.firstChild);
       mounted = true;
     } else if (!parent && mounted) {
       children();

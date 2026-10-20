@@ -13,6 +13,7 @@
  *
  * Imports are from "pipis" itself, as in LLM.md, which also checks that the package's `exports` resolve.
  */
+import { hydrate } from 'pipis/hydrate';
 import { Island, mountIslands } from 'pipis/islands';
 import { renderToString, serializeData } from 'pipis/server';
 import {
@@ -619,4 +620,12 @@ export function islandExamples() {
   const page = <Island name="counter" component={Counter} props={{ start: 3 }} />;
   mountIslands({ counter: Counter });
   return page;
+}
+
+/** The hydration section of LLM.md. */
+export function hydrationExamples(App: () => JSXElement) {
+  const { html, head } = renderToString(<App />, { hydratable: true });
+  // oxlint-disable-next-line typescript/no-non-null-assertion -- the line is LLM.md's, which is short on purpose
+  hydrate(document.getElementById('app')!, <App />);
+  return [html, head];
 }

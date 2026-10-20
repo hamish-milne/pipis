@@ -37,11 +37,15 @@ describe('the library layers', () => {
       .filter(([, allowed]) => allowed.includes(PLATFORM_IMPORT))
       .map(([module]) => module)
       .sort();
-    expect(users).toEqual(['core', 'dynamic', 'islands', 'server']);
-    for (const platform of ['platform.client', 'platform.server']) {
-      const other = platform === 'platform.client' ? 'platform.server' : 'platform.client';
-      expect([...(graph.get(platform) ?? [])].filter((n) => n === other || n === PLATFORM_IMPORT)).toEqual([]);
+    expect(users).toEqual(['core', 'dynamic', 'hydrate', 'islands', 'server']);
+    const platforms = ['platform.client', 'platform.server', 'platform.hydrate'];
+    for (const platform of platforms) {
+      const others = platforms.filter((n) => n !== platform);
+      expect([...(graph.get(platform) ?? [])].filter((n) => others.includes(n) || n === PLATFORM_IMPORT)).toEqual([]);
     }
+    // The hydrating platform is reached only through the seam, and the entry point that runs it.
+    const reachers = [...graph].filter(([, imports]) => imports.has('platform.hydrate')).map(([module]) => module);
+    expect(reachers.sort()).toEqual(['hydrate', 'hydrated']);
   });
 
   it('has no cycle', () => {
@@ -94,6 +98,6 @@ describe('the library layers', () => {
   it('keeps the JSX runtime out of the barrel, so JSX over core alone does not pull in the rest', () => {
     const reexported = importsOf(BARREL).map(({ specifier }) => specifier);
     expect(reexported.some((s) => s.includes('jsx'))).toBe(false);
-    expect(ENTRY_POINTS).toEqual(['index', 'jsx-runtime', 'jsx-dev-runtime', 'server', 'islands']);
+    expect(ENTRY_POINTS).toEqual(['index', 'jsx-runtime', 'jsx-dev-runtime', 'server', 'islands', 'hydrate']);
   });
 });

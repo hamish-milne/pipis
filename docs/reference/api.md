@@ -590,10 +590,26 @@ What `pipis` runs on. By default it is a browser; a bundler can be told it is a 
 
 ### `IS_CLIENT`
 
-Whether the code runs in a browser. `true` here and `false` in the server's build, a constant either way, so what depends on it is removed from the build that cannot use it.
+Whether the code runs in a browser. `true` here, and in the hydrating build; `false` in the server's. A constant, so what depends on it is removed from the build that cannot use it.
 
 ```ts
 const IS_CLIENT: boolean;
+```
+
+### `IS_SERVER`
+
+Whether the code runs on a server: the other side of `IS_CLIENT`. A constant.
+
+```ts
+const IS_SERVER: boolean;
+```
+
+### `IS_HYDRATE`
+
+Whether a page that a server wrote is being adopted: `true` only in the build that hydrates (the `pipis-hydrate` condition). A constant.
+
+```ts
+const IS_HYDRATE: boolean;
 ```
 
 ### `renderToString`
@@ -607,7 +623,23 @@ and `Suspense`'s promise do not run, and event handlers and `ref`s are not used:
 It throws if `pipis` is the browser's build rather than the server's, which is the bundler's to choose: see the guide to server rendering.
 
 ```ts
-function renderToString(element: JSXElement): RenderResult;
+function renderToString(element: JSXElement, options?: RenderOptions): RenderResult;
+```
+
+### `RenderOptions`
+
+From `pipis/server`.
+
+What `renderToString` can be asked.
+
+```ts
+interface RenderOptions {
+    /**
+     * Write markup that a browser can hydrate: each text node, and where each region ends, is marked, and what `Helmet` wrote is marked. The
+     * markup is a little larger and the same to read. Leave it off for a page that is not hydrated (a static site, or one with islands).
+     */
+    hydratable?: boolean;
+}
 ```
 
 ### `RenderResult`
@@ -672,6 +704,73 @@ leaves the rest of the page, and the other islands, as they are.
 
 ```ts
 function mountIslands(components: Record<string, (props: never) => JSXElement>, root?: ParentNode): Cleanup;
+```
+
+## Hydration
+
+Making a page that a server wrote live, in the browser, instead of making it again. Imported from `pipis/hydrate`, in a build with the `pipis-hydrate` condition. See the [guide to hydration](../guide/hydration.md).
+
+### `hydrate`
+
+From `pipis/hydrate`.
+
+Makes the page that a server wrote in `container` live: mounts `element` into it, adopting the nodes that are there instead of making new ones,
+so what the person sees, and has done to it (the focus, the scroll, what is typed), stays. It is synchronous. State may not be written while it
+runs; an `Effect`, a `Watch` and a `ref` are held until the page is whole, and then run.
+
+The page need not be what the app would make: a node that is missing is made, and one that is not wanted is removed, and the difference is
+reported to `onMismatch`. If the app throws, the page is made again, from nothing, and that is reported too.
+
+It throws if `pipis` is the browser's build rather than the hydrating one, which is the bundler's to choose: see the guide to hydration.
+
+```ts
+function hydrate(container: Element, element: JSXElement, options?: HydrateOptions): void;
+```
+
+### `HydrateOptions`
+
+From `pipis/hydrate`.
+
+What `hydrate` can be given.
+
+```ts
+interface HydrateOptions {
+    /**
+     * Told what the hydration found, when it found something to tell: nodes the server's page had and the app does not (`extraneous`), nodes the
+     * app has and the server's page did not (`missing`), or an error that made the page be built again (`error`). The page is right either way. The
+     * default logs it to the console; pass a function to do something else (or one that does nothing, to be told nothing).
+     */
+    onMismatch?: (report: HydrationReport) => void;
+}
+```
+
+### `HydrationReport`
+
+From `pipis/hydrate`.
+
+What a hydration found of the page: nodes it had to make because the server's page had none, and nodes of the server's that the page did not want.
+
+```ts
+interface HydrationReport {
+    missing: number;
+    extraneous: number;
+    /** The error that made the page be built again from nothing, if one did. */
+    error?: unknown;
+}
+```
+
+### `Static`
+
+From `pipis/hydrate`.
+
+Content that never changes, which a page that is hydrated takes as the server wrote it, without running `children`: so what makes it (a
+Markdown renderer, say) need not be run in the browser, and, with a build that leaves it out, is not in the page's code. Anywhere else it is
+its content, made from `children()`.
+
+```ts
+function Static({ children }: {
+    children: () => JSXElement;
+}): JSXElement;
 ```
 
 ## The JSX runtime

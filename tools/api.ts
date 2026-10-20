@@ -26,6 +26,7 @@ export interface Declaration {
 /** Where each public module is imported from. The names a module re-exports from another are listed once, under the module that has them. */
 const ENTRY: Record<string, string> = {
   base: 'pipis',
+  dom: 'pipis',
   'platform.client': 'pipis',
   core: 'pipis',
   reactive: 'pipis',
@@ -35,6 +36,7 @@ const ENTRY: Record<string, string> = {
   serialize: 'pipis/server',
   server: 'pipis/server',
   islands: 'pipis/islands',
+  hydrate: 'pipis/hydrate',
 };
 
 /** How the reference is laid out. Hand-written because the order and the introductions are editorial; checked to cover every export. */
@@ -114,13 +116,19 @@ export const STRUCTURE: { title: string; about: string; names: string[] }[] = [
     title: 'Platform and server rendering',
     about:
       'What `pipis` runs on. By default it is a browser; a bundler can be told it is a server (the `pipis-server` condition), and then an element can be rendered to HTML. See the [guide to server rendering](../guide/server-rendering.md).',
-    names: ['IS_CLIENT', 'renderToString', 'RenderResult', 'serializeData'],
+    names: ['IS_CLIENT', 'IS_SERVER', 'IS_HYDRATE', 'renderToString', 'RenderOptions', 'RenderResult', 'serializeData'],
   },
   {
     title: 'Islands',
     about:
       'Interactive components in a page that is made on a server, mounted in the browser over what the server wrote. Imported from `pipis/islands`. See the [guide to islands](../guide/islands.md).',
     names: ['Island', 'mountIslands'],
+  },
+  {
+    title: 'Hydration',
+    about:
+      'Making a page that a server wrote live, in the browser, instead of making it again. Imported from `pipis/hydrate`, in a build with the `pipis-hydrate` condition. See the [guide to hydration](../guide/hydration.md).',
+    names: ['hydrate', 'HydrateOptions', 'HydrationReport', 'Static'],
   },
   {
     title: 'The JSX runtime',

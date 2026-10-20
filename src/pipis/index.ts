@@ -6,4 +6,4 @@ export * from './reactive.ts';
 export * from './dynamic.ts';
 // What the nodes are made with is the platform's. Of what it provides these are public, and the rest (the ways the library makes an element
 // and sets its props) is not, which is why this is not `export *`.
-export { IS_CLIENT, createMarker, textNode } from '#platform';
+export { IS_CLIENT, IS_HYDRATE, IS_SERVER, createMarker, textNode } from '#platform';

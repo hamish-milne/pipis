@@ -60,7 +60,13 @@ writeFileSync(
       type: 'module',
       sideEffects: false,
       // The platform is the bundler's choice: the browser's unless it is told it is a server (docs/adr/0019-server-rendering.md).
-      imports: { '#platform': { 'pipis-server': entry('platform.server'), default: entry('platform.client') } },
+      imports: {
+        '#platform': {
+          'pipis-server': entry('platform.server'),
+          'pipis-hydrate': entry('platform.hydrate'),
+          default: entry('platform.client'),
+        },
+      },
       exports,
       types: './dist/index.d.ts',
     },

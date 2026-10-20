@@ -332,6 +332,82 @@ describe('the document head', () => {
   });
 });
 
+describe('hydratable markup', () => {
+  const hydratable = (element: JSXElement) => renderToString(element, { hydratable: true });
+
+  it('says where each text node begins, so that the ones that merge when parsed can be told apart', () => {
+    expect(hydratable(<p>Hello {reactive('world')}!</p>).html).toBe('<p><!--t-->Hello <!--t-->world<!--t-->!</p>');
+  });
+
+  it('marks a text node that is empty, which is not in the markup but is a text node', () => {
+    expect(hydratable(<p>a{reactive('')}b</p>).html).toBe('<p><!--t-->a<!--t--><!--t-->b</p>');
+  });
+
+  it('writes none of it unless asked, and nothing but the start of a region when it is', () => {
+    const page = (
+      <div>
+        text
+        <If condition={reactive(true)}>
+          <b>x</b>
+        </If>
+      </div>
+    );
+    expect(renderToString(page).html).toBe('<div>text<!----><b>x</b></div>');
+  });
+
+  it('writes where a region ends, as well as where it begins', () => {
+    expect(
+      hydratable(
+        <div>
+          <If condition={reactive(true)}>
+            <b>x</b>
+          </If>
+          <i>after</i>
+        </div>,
+      ).html,
+    ).toBe('<div><!----><b><!--t-->x</b><!--/--><i><!--t-->after</i></div>');
+  });
+
+  it('nests the regions, each with its own end', () => {
+    const inner = reactive(true);
+    expect(
+      hydratable(
+        <If condition={reactive(true)}>
+          <If condition={inner}>
+            <b />
+          </If>
+        </If>,
+      ).html,
+    ).toBe('<!----><!----><b></b><!--/--><!--/-->');
+  });
+
+  it('puts no marker inside the text of title, textarea, script and style, where it would be text', () => {
+    expect(hydratable(<textarea value="a" />).html).toBe('<textarea>a</textarea>');
+    expect(hydratable(<style>{'a{}'}</style>).html).toBe('<style>a{}</style>');
+    const { head } = hydratable(
+      <Helmet>
+        <title>T</title>
+      </Helmet>,
+    );
+    expect(head).toBe('<!--h--><title>T</title><!--/h-->');
+  });
+
+  it('marks the head that components wrote only when there is one', () => {
+    expect(hydratable(<p>no head</p>).head).toBe('');
+    expect(
+      renderToString(
+        <Helmet>
+          <title>T</title>
+        </Helmet>,
+      ).head,
+    ).toBe('<title>T</title>');
+  });
+
+  it('keeps a newline that starts a pre, which the marker before the text now stands in front of', () => {
+    expect(hydratable(<pre>{'\nx'}</pre>).html).toBe('<pre><!--t-->\nx</pre>');
+  });
+});
+
 describe('a render', () => {
   it('is a render of its own, whatever came before', () => {
     expect(

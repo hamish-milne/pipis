@@ -2,7 +2,7 @@
 
 pipis is a small JSX UI framework with **no virtual DOM, no re-rendering and no hooks**. Read this whole file before writing code. Sections are ordered by how much they matter. A checklist to run before you answer is at the end.
 
-Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write, `pipis/server`, for rendering to HTML on a server, and `pipis/islands`, for the interactive parts of such a page (section 7). Never import from `react`.
+Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write, `pipis/server`, for rendering to HTML on a server, and `pipis/islands`, for the interactive parts of such a page, and `pipis/hydrate`, for making a server-rendered page live (section 7). Never import from `react`.
 
 To use JSX, the project's `tsconfig.json` needs `"jsx": "react-jsx"` and `"jsxImportSource": "pipis"` (and its bundler the same import source: Vite `esbuild: { jsxImportSource: "pipis" }`). A single file can instead start with `/** @jsxImportSource pipis */`. pipis needs a DOM and ES2015 built-ins (`Map`, `Set`, `Symbol`); its source uses newer syntax (`??`, `?.`, `??=`), which a bundler targeting an older browser must lower.
 
@@ -60,13 +60,14 @@ If the project already has a main file that mounts your component, do not mount 
 | render somewhere else in the DOM / into `<head>`                | `Portal` + `PortalTarget` / `Helmet`                                |
 | share a value with deep descendants                             | `defineContext`                                                     |
 | render HTML on a server, or at build time                       | `renderToString(<App />)` from `"pipis/server"` (see section 7)     |
+| a server-rendered app that is interactive everywhere | `renderToString(el, { hydratable: true })` on the server, `hydrate(container, el)` in the browser, from `"pipis/hydrate"` (section 7) |
 | a mostly static server-rendered page with a few interactive parts | `Island` on the server, `mountIslands` in the browser, from `"pipis/islands"` (section 7) |
 | run browser-only code in a component that is also server-rendered | `IS_CLIENT`, or an `Effect` (which does not run on a server)      |
 | get a DOM node                                                  | `ref` prop, then use the node inside an `Effect`                    |
 | pass a static value where a Reactive is expected                | `constant(value)`                                                   |
 | combine several state values                                    | keep them in ONE reactive object and `select` fields off it        |
 
-**Exports** (import only these): `reactive, select, patch, constant, isReactive, subscribe, adapt, defineContext, withErrorHandler, getErrorHandler, handleError, subscribeWithCatch, If, OneOf, List, ReactiveList, Dynamic, Effect, effect, Watch, Suspense, ErrorBoundary, Portal, PortalTarget, Helmet, Fragment, emptyElement, IS_CLIENT`, plus the low-level `createElement, textNode, createMarker, moveNode, setRef, dynamic`. Types are exported too (for example `type JSXElement`). Import every name you use.
+**Exports** (import only these): `reactive, select, patch, constant, isReactive, subscribe, adapt, defineContext, withErrorHandler, getErrorHandler, handleError, subscribeWithCatch, If, OneOf, List, ReactiveList, Dynamic, Effect, effect, Watch, Suspense, ErrorBoundary, Portal, PortalTarget, Helmet, Fragment, emptyElement, IS_CLIENT`, plus `IS_SERVER, IS_HYDRATE` (constants, like `IS_CLIENT`) and the low-level `createElement, textNode, createMarker, moveNode, setRef, dynamic`. Types are exported too (for example `type JSXElement`). Import every name you use.
 
 ## 4. If you know React: habits that break here
 
@@ -632,7 +633,7 @@ For HTML on a server (or at build time) the server's code is bundled with the **
 ```tsx
 const { html, head } = renderToString(<App />);
 ```
-It is synchronous (no `await` in a component) and renders each reactive value as it is. On a server `Effect`, `Watch`, `Portal` and `Suspense`'s promise do not run (a `Suspense` shows `loading`), `ref`s and event handlers are not used, `Helmet` goes to `head`, and a tag HTML does not know is SVG as in a browser. The browser does not adopt the markup: it mounts its own over it. Pass data to the browser as a prop, written with `serializeData` into a `<script type="application/json">`.
+It is synchronous (no `await` in a component) and renders each reactive value as it is. On a server `Effect`, `Watch`, `Portal` and `Suspense`'s promise do not run (a `Suspense` shows `loading`), `ref`s and event handlers are not used, `Helmet` goes to `head`, and a tag HTML does not know is SVG as in a browser. Unless the page is hydrated (below), the browser does not adopt the markup: it mounts its own over it. Pass data to the browser as a prop, written with `serializeData` into a `<script type="application/json">`.
 
 ### Islands
 ```ts
@@ -643,6 +644,18 @@ For a page that is mostly static HTML with a few interactive components. On the 
 ```tsx
 <Island name="counter" component={Counter} props={{ start: 3 }} />   // on the server, in the page
 mountIslands({ counter: Counter });                                   // in the browser's script
+```
+
+### Hydration
+```ts
+renderToString(element, { hydratable: true }): { html, head }                       // from "pipis/server": markup with markers for the browser
+hydrate(container: Element, element: JSXElement, options?: { onMismatch? }): void   // from "pipis/hydrate"
+Static({ children: () => JSXElement }): JSXElement                                  // from "pipis/hydrate": server markup adopted without running children
+```
+For an app that is server-rendered and interactive everywhere. The server is built with `pipis-server` and `hydratable: true`; the browser with the **`pipis-hydrate` condition** (Vite: `resolve.conditions: ["pipis-hydrate"]`), and `hydrate` mounts the app over the page, taking the server's nodes instead of making them. It is synchronous. State may be written while it runs, but not so that an `If`, `OneOf`, `List`, `ReactiveList` or `Dynamic` that is already mounted changes what it shows (that is an error): set such state in an `Effect`, which, with `Watch`, `Portal` and `ref`, runs when the page is whole. A mismatch is repaired (nodes made or removed) and reported with `console.warn`; make what the server renders the same as the browser's (no time, randomness or `window` in the render). `Helmet` content is replaced, not adopted. In a build without the condition `hydrate` throws.
+```tsx
+const { html, head } = renderToString(<App />, { hydratable: true });   // on the server
+hydrate(document.getElementById("app")!, <App />);                      // in the browser
 ```
 
 ## 8. Styling and DOM notes

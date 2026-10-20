@@ -49,8 +49,9 @@ src/pipis/      the library: base.ts, core.ts, reactive.ts, dynamic.ts, svg.ts, 
                 index.ts is the barrel (`export *` of base, core, reactive and dynamic, and the platform's three public names): a module imports
                 what it needs from the module that has it, not through core. What is the library's own and not an app's is in internal.ts
                 What the nodes are made with is a platform, chosen by the bundler (ADR 19): platform.client.ts (the document's, the default) and
-                platform.server.ts (plain objects that are read as HTML), each exporting what platform.ts says; server.ts is `pipis/server`.
-                A test of server rendering is named *.server.test.ts and runs in its own project, with `pipis` as the server's build
+                platform.server.ts (plain objects that are read as HTML) and platform.hydrate.ts (the document's, which adopts a page that a server wrote: ADR 21),
+                each exporting what platform.ts says; server.ts is `pipis/server` and hydrate.ts `pipis/hydrate`. hydrated.ts is the one seam to the hydrating platform.
+                A test of server rendering is named *.server.test.ts and of hydration *.hydrate.test.tsx; each runs in its own project, with `pipis` as that platform
 src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 docs/           the documentation, in Markdown: start/, guide/, reference/ (generated) and adr/ (the design decisions)
