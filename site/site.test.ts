@@ -6,7 +6,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 import { createServer } from 'vite-plus';
 import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
 import { allBlocks, markdownFiles } from '../tools/docs.ts';
-import { serve } from './serve.ts';
+import { pagesOf, serve } from './serve.ts';
 
 // The site is built, and then used in a real browser: every page is opened, every example is run in its frame, one is edited, the search
 // is used and the theme is switched. The site is served from under a path of its own, because it has to work wherever it is put.
@@ -31,7 +31,7 @@ let close: (() => void) | undefined;
 
 beforeAll(async () => {
   // The site is built as it is built for real: by `vp build`, which runs the demos through Vite and writes the pages beside them.
-  execSync(`pnpm vp build --outDir ${JSON.stringify(out)} --emptyOutDir`, { cwd: root, stdio: 'pipe' });
+  execSync(`pnpm vp build --config site/hydrate.config.ts --outDir ${JSON.stringify(out)} --emptyOutDir`, { cwd: root, stdio: 'pipe' });
   const files = walk(out).map((f) => relative(out, f).replace(/\\/g, '/'));
   pages = files.filter((f) => f.endsWith('.html') && !/^(assets|pagefind|demo)\//.test(f));
   examples = files.filter((f) => f.startsWith('assets/examples/')).map((f) => f.slice('assets/examples/'.length, -'.js'.length));
@@ -215,7 +215,12 @@ async function showExamples(page: Page) {
 
 describe('the dev server', () => {
   it('serves the generated pages with the reload client, and the demo app as Vite serves any entry', async () => {
-    const dev = await createServer({ root, logLevel: 'silent', server: { port: 0, host: '127.0.0.1' } });
+    const dev = await createServer({
+      root,
+      configFile: join(root, 'site/hydrate.config.ts'),
+      logLevel: 'silent',
+      server: { port: 0, host: '127.0.0.1' },
+    });
     await dev.listen();
     try {
       const address = dev.httpServer?.address();
@@ -754,4 +759,79 @@ describe('as a single page', () => {
       server.close();
     }
   }, 240_000);
+});
+
+describe('built for a server', () => {
+  // The same site, but the build does not write the pages: it writes the browser's files, and beside them the server's code with a middleware that
+  // renders a page when it is asked for (`build: 'server'`). The pages it renders are the pages that the build of files writes.
+  const serverOut = join(root, 'out', 'site-server');
+  const serverCode = `${serverOut}-server`;
+  let serverBase = '';
+  let serverClose: (() => void) | undefined;
+
+  beforeAll(async () => {
+    execSync(`pnpm vp build --config site/server.config.ts --outDir ${JSON.stringify(serverOut)} --emptyOutDir`, {
+      cwd: root,
+      stdio: 'pipe',
+    });
+    const { server, url } = await serve(serverOut, 0, PREFIX, await pagesOf(serverCode, PREFIX));
+    serverBase = url;
+    serverClose = () => server.close();
+  }, 240_000);
+
+  afterAll(() => serverClose?.());
+
+  it('writes the browser’s files to the output folder, with no page, and the server beside it, out of reach of a host that serves files', () => {
+    const files = walk(serverOut).map((f) => relative(serverOut, f).replace(/\\/g, '/'));
+    expect(files.filter((f) => f.endsWith('.html') && !/^(assets\/frame\.html|demo\/)/.test(f))).toEqual([]);
+    expect(files.some((f) => /^assets\/page-.*\.js$/.test(f))).toBe(true);
+    expect(files).toContain('assets/frame.html');
+    expect(files).toContain('demo/demo-app.html');
+    expect(files, 'the search is built from the pages, which are not kept').toContain('pagefind/pagefind.js');
+    const code = walk(serverCode).map((f) => relative(serverCode, f).replace(/\\/g, '/'));
+    for (const file of ['server.js', 'handler.js', 'pages.json', 'assets.json']) expect(code, file).toContain(file);
+    // The server has what it imports in it, so it needs no more than Node.
+    expect(readFileSync(join(serverCode, 'server.js'), 'utf8')).not.toMatch(/from ['"](?:marked|prism-code-editor)/);
+  });
+
+  it('renders the pages that the build of files writes: every page, byte for byte', async () => {
+    // (The files in the static build are named by their contents, so the same code has the same names.)
+    const mismatches: string[] = [];
+    for (const path of pages) {
+      const response = await fetch(serverBase + path);
+      const html = await response.text();
+      if (response.status !== 200 || html !== readFileSync(join(out, path), 'utf8')) mismatches.push(path);
+    }
+    expect(mismatches).toEqual([]);
+    expect((await fetch(serverBase)).status, 'the index is at the root').toBe(200);
+  }, 120_000);
+
+  it('leaves what is not its page to the next handler, and does not answer what is not asked for', async () => {
+    expect((await fetch(`${serverBase}no/such/page.html`)).status).toBe(404);
+    expect((await fetch(`${serverBase}guide/lifecycle.html`, { method: 'POST' })).status).toBe(404);
+    const head = await fetch(`${serverBase}guide/lifecycle.html`, { method: 'HEAD' });
+    expect([head.status, head.headers.get('content-type')]).toEqual([200, 'text/html; charset=utf-8']);
+    // Outside the path that the site is served under it is not the site's.
+    expect((await fetch(serverBase.replace(PREFIX, '/elsewhere/') + 'guide/lifecycle.html')).status).toBe(404);
+  });
+
+  it('works in a browser as the built files do: hydrated, with the search, and no warning', async () => {
+    const { page, errors } = await openIn(serverBase, 'start/getting-started.html');
+    try {
+      await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false, undefined, {
+        timeout: 30_000,
+      });
+      await page.keyboard.press('Control+k');
+      await page.locator('dialog.search input').fill('Suspense');
+      const first = page.locator('.search-results a').first();
+      await first.waitFor({ timeout: 15_000 });
+      await first.click();
+      await page.waitForLoadState('load');
+      expect(page.url().startsWith(serverBase), `the result is a page that the server renders: ${page.url()}`).toBe(true);
+      expect(await page.locator('article h1').count()).toBe(1);
+      expect(errors).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  }, 90_000);
 });

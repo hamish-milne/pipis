@@ -7,6 +7,7 @@
 //   vp build --config site/islands.config.ts   the same site with a script that mounts only the islands, and does not hydrate the page
 //   vp build --config site/single.config.ts    the same site as a single page, with all the Markdown on it
 //   vp build --config site/single-islands.config.ts   both
+//   vp build --config site/server.config.ts    the pages are not written: a server renders them (the recipe in docs/authoring.md)
 //   node site/serve.ts               serves what was built, for looking at it
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -57,9 +58,11 @@ export interface SiteOptions {
   render?: 'hydrate' | 'islands';
   /** Whether each Markdown file is a page of its own (the default), or the site is one page with all of them on it. It works with either way of rendering. */
   pages?: 'separate' | 'single';
+  /** What the build leaves: every page as a file (`static`, the default), or the server's code to render them with (`server`, see docs/authoring.md). */
+  build?: 'static' | 'server';
 }
 
-export function docsSite({ render = 'hydrate', pages = 'separate' }: SiteOptions = {}): Plugin {
+export function docsSite({ render = 'hydrate', pages = 'separate', build = 'static' }: SiteOptions = {}): Plugin {
   return docsKit({
     docs: 'docs',
     siteTitle,
@@ -77,6 +80,7 @@ export function docsSite({ render = 'hydrate', pages = 'separate' }: SiteOptions
     conditions: { client: render === 'hydrate' ? ['pipis-hydrate'] : [], server: ['pipis-server'] },
     alias,
     pages,
+    build,
     define: { __DOCS_RENDER__: JSON.stringify(render), __DOCS_PAGES__: JSON.stringify(pages) },
     // What a module for the server is in the browser: the page has the same structure, and nothing in it. (The page's markup is what the browser adopts.)
     serverOnly: {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { parseNav } from './nav.ts';
-import { sectionOf } from './pages.ts';
+import { join } from 'node:path';
+import { pagesOf } from './handler.ts';
+import { loadPages, pagesData, sectionOf, type PagesData } from './pages.ts';
 import { decodeEntities } from './entities.ts';
 import { readFrontmatter } from './frontmatter.ts';
 import { pageUrl, parsePage, relativeUrl, type DocCode, type DocHeading, type PageContext } from './markdown.ts';
@@ -206,5 +208,40 @@ describe('the transform of an example', () => {
 
   it('reports a syntax error, which is what the editor shows', () => {
     expect(() => toJs('const = ;', 'pipis')).toThrow(/Unexpected|Missing|Expected/);
+  });
+});
+
+describe('the pages that a server renders', () => {
+  const repo = join(import.meta.dirname, '..');
+
+  // A server reads the pages as data that the build wrote (`pages.json`), and makes the models again with the little that is in docs-kit/handler.ts.
+  it.each([false, true])('are the pages that were written, as models again (a single page: %s)', (single) => {
+    const { pages } = loadPages({
+      root: repo,
+      docs: 'docs',
+      siteTitle: 'Site',
+      repoHome: 'https://example.test/r',
+      repoUrl: 'https://example.test/r/blob/main',
+      jsxImportSource: 'pipis',
+      single,
+    });
+    const data: PagesData = JSON.parse(JSON.stringify(pagesData(pages, single)));
+    const restored = pagesOf(data);
+    expect(restored.length).toBe(pages.length);
+    // The data is the same when it is written again, and what the functions answer is the same: the links from each page to each page of the site.
+    expect(pagesData(restored, single)).toEqual(data);
+    const urls = data.nav.flatMap((s) => s.items.map((i) => i.url));
+    for (const [at, page] of pages.entries()) {
+      const again = restored[at];
+      expect(again?.url).toBe(page.url);
+      for (const url of urls) expect(again?.href(url), `${page.url} to ${url}`).toBe(page.href(url));
+      expect(again?.current?.url).toBe(page.current?.url);
+      expect(again?.merged?.length).toBe(page.merged?.length);
+    }
+  });
+
+  it('can be told where the files they read are', () => {
+    const { pages } = loadPages({ root: repo, docs: 'docs', siteTitle: 'Site', repoHome: 'r', repoUrl: 'u', jsxImportSource: 'pipis' });
+    expect(pagesOf(pagesData(pages, false), '/elsewhere')[0]?.sourceRoot).toBe('/elsewhere');
   });
 });

@@ -39,7 +39,7 @@ export interface PageModel {
   /** The repository's address on its host. */
   repoHome: string;
   /** A link from this page to another page of the site. */
-  href(url: string): string;
+  href: (url: string) => string;
   /**
    * On a site that is a single page, every page of it, in the order of the navigation and then of the files, as the pages they are (their headings
    * and links are named for the one page that they are on). This is the whole site's model, which is the index page and these.
@@ -134,4 +134,31 @@ export function loadPages(options: PagesOptions): { pages: PageModel[]; examples
   const index = pages.find((p) => p.url === 'index.html') ?? pages[0];
   if (!index) throw new Error('The site has no pages');
   return { pages: [{ ...index, title: options.siteTitle, merged }], examples };
+}
+
+/** A page as it is written for a server to read again: without its functions, and with its place in the navigation as the addresses of its neighbours. */
+export type PageData = Omit<PageModel, 'href' | 'nav' | 'current' | 'previous' | 'next' | 'merged'> & {
+  current?: string;
+  previous?: string;
+  next?: string;
+  merged?: PageData[];
+};
+
+/** What the build of a server writes beside it (`pages.json`): the pages, the navigation they share, and whether they are one page. */
+export interface PagesData {
+  single: boolean;
+  nav: NavSection[];
+  pages: PageData[];
+}
+
+/** The pages as data (`docs-kit/handler.ts` makes them models again, and a test holds the two to each other). */
+export function pagesData(pages: PageModel[], single: boolean): PagesData {
+  const plain = ({ href: _href, nav: _nav, current, previous, next, merged, ...rest }: PageModel): PageData => ({
+    ...rest,
+    ...(current && { current: current.url }),
+    ...(previous && { previous: previous.url }),
+    ...(next && { next: next.url }),
+    ...(merged && { merged: merged.map(plain) }),
+  });
+  return { single, nav: pages[0]?.nav ?? [], pages: pages.map(plain) };
 }

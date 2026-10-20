@@ -10,13 +10,14 @@
 //
 // The two sides of the library are the bundler's to choose, and Vite's environments are how: the browser's (`client`) and the server's (`ssr`)
 // are given the conditions that make the library the build of each (`options.conditions`).
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build as viteBuild, createServer, type InlineConfig, type Plugin, type ViteDevServer } from 'vite-plus';
 import { frameFiles, type FrameOptions } from './frames.ts';
-import { loadPages, type Assets, type PageModel, type PagesOptions } from './pages.ts';
+import { stripToJs } from '../tools/strip-types.ts';
+import { loadPages, pagesData, type Assets, type PageModel, type PagesOptions } from './pages.ts';
 import { writeSearchIndex } from './search.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -55,6 +56,16 @@ export interface DocsOptions extends Omit<PagesOptions, 'root'> {
    * it needs no search index: the browser's own find is the search.
    */
   pages?: 'separate' | 'single';
+  /**
+   * What the build leaves: `static` (the default) writes every page as a file, and the result is files only, for any host that serves files; the
+   * server's entry is built to do it and is thrown away. `server` leaves the pages to be rendered when they are asked for: the build writes
+   * the scripts, the frames, the demos and the search index as files (in the output folder), and the server's entry, bundled with what it uses,
+   * beside the data it needs and a middleware (`handler.js`, from docs-kit/handler.ts) for a Node server to render the pages with. See the
+   * recipe for Express in docs/authoring.md.
+   */
+  build?: 'static' | 'server';
+  /** Where `build: 'server'` writes the server (default: the output folder's name with `-server`, beside it). It is not for a host to serve as files. */
+  serverOutDir?: string;
 }
 
 /** Where the files that Vite does not know are put in the site, and the names of the two virtual modules. */
@@ -141,7 +152,8 @@ const write = (file: string, content: string) => {
 export function docsKit(options: DocsOptions): Plugin {
   let root = '';
   let outDir = '';
-  const ssrOut = () => join(root, 'out', 'docs-ssr');
+  // The server's entry is built to a place of its own: out of the way if the pages are written as files, and to be deployed if they are not.
+  let ssrDir = '';
   const alias = () =>
     Object.entries(options.alias ?? {}).map(([find, replacement]) => ({
       find: new RegExp(`^${find.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}$`),
@@ -157,9 +169,14 @@ export function docsKit(options: DocsOptions): Plugin {
     config(_user, env) {
       // Vitest runs a Vite of its own over this configuration for every test run, and the tests need the library as it is by default.
       if (env.mode === 'test') return undefined;
+      const server = options.build === 'server';
       const common = {
         resolve: { conditions: options.conditions.client, alias: alias() },
-        ssr: { resolve: { conditions: options.conditions.server } },
+        // A server that is deployed has what it imports in it. (Node's own modules are still Node's.)
+        ssr: {
+          resolve: { conditions: options.conditions.server },
+          ...(server && env.command === 'build' ? { noExternal: true as const } : {}),
+        },
         define: options.define ?? {},
       };
       if (env.command === 'serve') {
@@ -171,6 +188,9 @@ export function docsKit(options: DocsOptions): Plugin {
           server: { watch: { ignored: ['**/out/**', '**/dist/**'] } },
         };
       }
+      const from = _user.root ?? process.cwd();
+      const outFolder = resolve(from, _user.build?.outDir ?? 'dist');
+      ssrDir = options.serverOutDir ? resolve(options.serverOutDir) : server ? `${outFolder}-server` : join(from, 'out', 'docs-ssr');
       return {
         ...common,
         base: './',
@@ -178,7 +198,7 @@ export function docsKit(options: DocsOptions): Plugin {
         environments: {
           client: { build: { manifest: true, modulePreload: false, rollupOptions: { input: { page: ENTRY } } } },
           ssr: {
-            build: { outDir: ssrOut(), emptyOutDir: true, minify: false, rollupOptions: { input: { server: resolve(options.server) } } },
+            build: { outDir: ssrDir, emptyOutDir: true, minify: false, rollupOptions: { input: { server: resolve(options.server) } } },
           },
         },
       };
@@ -252,11 +272,22 @@ export function docsKit(options: DocsOptions): Plugin {
     const manifestFile = join(outDir, '.vite', 'manifest.json');
     const assets = assetsOf(JSON.parse(readFileSync(manifestFile, 'utf8')));
     rmSync(join(outDir, '.vite'), { recursive: true, force: true });
-    const { render }: { render: Render } = await import(`${pathToFileURL(join(ssrOut(), 'server.js')).href}?t=${Date.now()}`);
+    const { render }: { render: Render } = await import(`${pathToFileURL(join(ssrDir, 'server.js')).href}?t=${Date.now()}`);
     const { pages, examples } = loadPages(pagesOptions());
-    for (const page of pages) {
-      const html = render(page, { script: `${page.root}${assets.script}`, styles: assets.styles.map((s) => `${page.root}${s}`) });
-      write(join(outDir, page.url), `<!doctype html>\n${html}\n`);
+    /** The pages as files, in `into`. */
+    const writePages = (into: string) => {
+      for (const page of pages) {
+        const html = render(page, { script: `${page.root}${assets.script}`, styles: assets.styles.map((s) => `${page.root}${s}`) });
+        write(join(into, page.url), `<!doctype html>\n${html}\n`);
+      }
+    };
+    if (options.build === 'server') {
+      // What a server needs to render the pages: the pages, where the browser's files are, and the middleware that does it.
+      write(join(ssrDir, 'pages.json'), JSON.stringify(pagesData(pages, options.pages === 'single')));
+      write(join(ssrDir, 'assets.json'), JSON.stringify(assets));
+      write(join(ssrDir, 'handler.js'), stripToJs(readFileSync(join(here, 'handler.ts'), 'utf8')));
+    } else {
+      writePages(outDir);
     }
     for (const [name, content] of Object.entries(await frameFiles(frameOptions(), examples))) write(join(outDir, 'assets', name), content);
     if (options.app) {
@@ -275,7 +306,18 @@ export function docsKit(options: DocsOptions): Plugin {
         },
       });
     }
-    if (options.pages !== 'single') await writeSearchIndex(outDir);
+    if (options.pages === 'single') return;
+    if (options.build !== 'server') {
+      await writeSearchIndex(outDir);
+      return;
+    }
+    // The search reads pages as files, and the server does not have them: they are written for it to read and thrown away, and its index stays.
+    const scratch = join(root, 'out', 'docs-search');
+    rmSync(scratch, { recursive: true, force: true });
+    writePages(scratch);
+    await writeSearchIndex(scratch);
+    cpSync(join(scratch, 'pagefind'), join(outDir, 'pagefind'), { recursive: true });
+    rmSync(scratch, { recursive: true, force: true });
   }
 
   function frameOptions(): FrameOptions {

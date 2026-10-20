@@ -94,7 +94,41 @@ tags: [reactivity, state]
 
 Anything else, a key twice, or a line that is not `key: value` is an error that names the line. The search's filters are made from these: a section is one choice and topics add up, with how many pages each leaves.
 
-The site is split in two. `docs-kit/` is the engine, a Vite plugin: it reads Markdown into tokens, and knows pages, navigation, frames, the editor, the search and how a page is built and served, and nothing of pipis. `site/` is this site, written as a pipis app, and is the plugin's options (`site/vite-plugin.ts`) and four things: the page as one app (`site/app.tsx`: the header, the navigation, the article, the contents), what only the server makes of it (`site/docs.server.tsx`, which reads the Markdown and highlights the code, and is a stub in the browser's build, so none of that is in the page's script), the parts that do something, which are islands (`site/controls.tsx`, `site/blocks.tsx`, `site/search.tsx`), and the browser's script (`site/client.ts`). `vp dev` renders a page when it is asked for, and `vp build` writes them all ([Server rendering](guide/server-rendering.md), [Hydration](guide/hydration.md), [Islands](guide/islands.md)); `docsSite({ render, pages })` in `site/vite-plugin.ts` is the site's two choices: `render` is `hydrate` (the page is taken over) or `islands` (only the islands are mounted), and `pages` is `separate` (a page for each Markdown file) or `single` (one page with all of them on it, in the order of the navigation, with the find of the browser for a search); `vp build --config site/islands.config.ts`, `site/single.config.ts` and `site/single-islands.config.ts` build the others. The rest of `site/` is its style sheet and `site/adapter.ts`, the few lines that mount an example's default export in a frame. Another library's docs are the same kit with a different adapter and components. `site/site.test.ts` builds the site under a path of its own and uses it in Chromium: every page is opened, every example run, one edited, the search used, the theme switched, and the same again in islands mode.
+The site is split in two. `docs-kit/` is the engine, a Vite plugin: it reads Markdown into tokens, and knows pages, navigation, frames, the editor, the search and how a page is built and served, and nothing of pipis. `site/` is this site, written as a pipis app, and is the plugin's options (`site/vite-plugin.ts`) and four things: the page as one app (`site/app.tsx`: the header, the navigation, the article, the contents), what only the server makes of it (`site/docs.server.tsx`, which reads the Markdown and highlights the code, and is a stub in the browser's build, so none of that is in the page's script), the parts that do something, which are islands (`site/controls.tsx`, `site/blocks.tsx`, `site/search.tsx`), and the browser's script (`site/client.ts`). `vp dev` renders a page when it is asked for, and `vp build` writes them all ([Server rendering](guide/server-rendering.md), [Hydration](guide/hydration.md), [Islands](guide/islands.md)); `docsSite({ render, pages })` in `site/vite-plugin.ts` is the site's two choices: `render` is `hydrate` (the page is taken over) or `islands` (only the islands are mounted), and `pages` is `separate` (a page for each Markdown file) or `single` (one page with all of them on it, in the order of the navigation, with the find of the browser for a search); `vp build --config site/islands.config.ts`, `site/single.config.ts` and `site/single-islands.config.ts` build the others. A third, `build`, is whether the build writes the pages as files (`static`) or leaves them for a server to render (`server`): see [Serving the documentation from a server](#serving-the-documentation-from-a-server). The rest of `site/` is its style sheet and `site/adapter.ts`, the few lines that mount an example's default export in a frame. Another library's docs are the same kit with a different adapter and components. `site/site.test.ts` builds the site under a path of its own and uses it in Chromium: every page is opened, every example run, one edited, the search used, the theme switched, and the same again in islands mode.
+
+### Serving the documentation from a server
+
+By default the build writes every page as a file (`build: 'static'`), and the result is files for any host that serves files. When the documentation is part of an application that has a server, the build can leave the pages to be rendered when they are asked for (`build: 'server'`, in the plugin's options; `site/server.config.ts` is the configuration, and `vp build --config site/server.config.ts` builds it). Both render a page with the same `render` of the site's server entry, so a page from the server is the page that the build of files would have written, byte for byte (a test holds them to it).
+
+The build then writes two folders, which are not served by the same means:
+
+```text
+dist/            the browser's files: the scripts and style sheets (named by their contents), the frames of the examples, the demos, the search index
+dist-server/     the server's: server.js (with what it imports in it), handler.js, pages.json and assets.json
+```
+
+`dist-server/handler.js` is `docs-kit/handler.ts` with its types blanked out. It exports `createHandler(options)`, which returns a middleware, `(request, response, next)`, the form that Express, Connect and `node:http` take. It answers a `GET` or `HEAD` for a page of the site with the page, and calls `next()` for anything else, so the rest of the application is left alone. In Express:
+
+```js
+import express from 'express';
+import { createHandler } from './dist-server/handler.js';
+
+const app = express();
+app.use('/docs', express.static('dist')); // the browser's files
+app.use('/docs', await createHandler({ base: '/docs/' })); // the pages
+app.get('/', (request, response) => response.send('The application'));
+app.listen(3000);
+```
+
+The pages link to each other and to their files by relative paths, so they work wherever they are mounted; `base` is only how the middleware knows which addresses are its own. Two more things can be said when it is created, or when the site is built:
+
+| Option                  | Where                          | What it is for                                                                                                                                                   |
+| ----------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base`                  | `createHandler`                | The path the site is mounted under (`/docs/`). The default is `/`.                                                                                               |
+| `sourceRoot`            | `createHandler`                | Where the files are that a page reads as it is rendered. A demo shows the source of its app from `src/samples`, so those files go where the server runs.        |
+| `serverOutDir`          | the plugin's options           | Where the server's folder is written (by default, beside the output folder with `-server` added). It is not for a host to serve as files.                       |
+
+Other frameworks need only the same contract. The middleware has no dependency but Node, and a framework that does not take `(request, response, next)` can call the function it returns with the two Node objects and answer 404 itself when it calls `next`. `site/serve.ts` is the smallest example: it serves the folder of files and falls back to the middleware (`node site/serve.ts dist --server dist-server`), and the tests of the site use it. The search is built from the pages as files and its index is written to the output folder, so the pages that the server renders are found as the pages of a built site are. The development server (`vp dev`) renders on request in the same way, whichever `build` says.
 
 ### Everything else on a page
 
