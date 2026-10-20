@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { parseNav } from './nav.ts';
-import { sectionOf } from './build.ts';
+import { sectionOf } from './pages.ts';
 import { decodeEntities } from './entities.ts';
 import { readFrontmatter } from './frontmatter.ts';
 import { pageUrl, parsePage, relativeUrl, type DocCode, type DocHeading, type PageContext } from './markdown.ts';

@@ -33,6 +33,11 @@ export interface PageContext {
   file: string;
   /** Where the repository's files outside the docs are, for a link to `../LLM.md`. */
   repoUrl: string;
+  /**
+   * Whether the page is one of many on a single page of the site: its headings are named for it (`guide-lifecycle--mount`, which is unique on the
+   * page), and a link to another page is a link to that page's place on it (`#guide-lifecycle`).
+   */
+  single?: boolean;
 }
 
 export interface ParsedPage {
@@ -50,6 +55,13 @@ export interface ParsedPage {
 /** The page a Markdown file becomes, relative to the site: `README.md` is the index of its folder. */
 export function pageUrl(file: string): string {
   return file.replace(/(^|\/)README\.md$/, '$1index.md').replace(/\.md$/, '.html');
+}
+
+/** What a page is called on a site that is a single page: its place in the site, without its extension, as one word: `guide-lifecycle`. */
+export function pageId(file: string): string {
+  return pageUrl(file)
+    .replace(/\.html$/, '')
+    .replace(/\//g, '-');
 }
 
 /** `target` as a link from `from`, both being site paths. */
@@ -89,7 +101,8 @@ export function parsePage(markdown: string, ctx: PageContext): ParsedPage {
       const base = anchorOf(token.text);
       const count = seen.get(base) ?? 0;
       seen.set(base, count + 1);
-      const id = count === 0 ? base : `${base}-${count}`;
+      const named = count === 0 ? base : `${base}-${count}`;
+      const id = ctx.single ? `${pageId(ctx.file)}--${named}` : named;
       Object.assign(token, { id });
       const text = plainText(token.tokens ?? []);
       if (token.depth === 1 && !title) title = text;
@@ -118,11 +131,13 @@ export function parsePage(markdown: string, ctx: PageContext): ParsedPage {
 
 /** Where a link in a page goes on the site. A page of the docs is a page of the site; any other file of the repository is on its host. */
 function link(href: string, ctx: PageContext): string {
-  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('#') || href.startsWith('/')) return href;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('/')) return href;
+  if (href.startsWith('#')) return ctx.single ? `#${pageId(ctx.file)}--${href.slice(1)}` : href;
   const [path = '', anchor] = href.split('#');
   const resolved = posix.normalize(posix.join(posix.dirname(ctx.file), path));
   const hash = anchor === undefined ? '' : `#${anchor}`;
   if (resolved.startsWith('..')) return `${ctx.repoUrl}/${resolved.replace(/^(\.\.\/)+/, '')}${hash}`;
   if (!resolved.endsWith('.md')) return href;
+  if (ctx.single) return `#${pageId(resolved)}${anchor === undefined ? '' : `--${anchor}`}`;
   return relativeUrl(pageUrl(ctx.file), pageUrl(resolved)) + hash;
 }

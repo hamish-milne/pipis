@@ -25,12 +25,14 @@ function post(message: { type: string; [key: string]: unknown }) {
 async function run(url: string) {
   const mine = ++generation;
   try {
-    unmount?.();
-    unmount = undefined;
-    if (root) root.textContent = '';
     const module: unknown = await import(/* @vite-ignore */ url);
     // A newer run has started while this one was loading: it is the one to show.
     if (mine !== generation) return;
+    // What was shown stays until the new example is ready, and is replaced in one go: a frame that is empty for a moment reports that its height is
+    // nothing, and the page around it shrinks and grows again.
+    unmount?.();
+    unmount = undefined;
+    if (root) root.textContent = '';
     if (root) unmount = adapter.mount(module, root);
     post({ type: 'ok' });
   } catch (error) {

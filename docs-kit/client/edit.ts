@@ -34,7 +34,10 @@ export function startEditing({ host, source, jsxImportSource, run, original, rep
   host.append(element);
 
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // What the frame is showing. The editor reports the code as it starts, and that is no reason to run the example again.
+  let shown = source;
   const compile = (code: string) => {
+    shown = code;
     try {
       const js = toJs(code, jsxImportSource);
       report('');
@@ -54,6 +57,7 @@ export function startEditing({ host, source, jsxImportSource, run, original, rep
       tabSize: 2,
       onUpdate(code) {
         clearTimeout(timer);
+        if (code === shown) return;
         timer = setTimeout(() => compile(code), 300);
       },
     },
@@ -67,6 +71,7 @@ export function startEditing({ host, source, jsxImportSource, run, original, rep
   return {
     reset() {
       clearTimeout(timer);
+      shown = source;
       editor.setOptions({ value: source });
       report('');
       original();

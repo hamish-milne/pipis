@@ -33,7 +33,7 @@ beforeAll(async () => {
   // The site is built as it is built for real: by `vp build`, which runs the demos through Vite and writes the pages beside them.
   execSync(`pnpm vp build --outDir ${JSON.stringify(out)} --emptyOutDir`, { cwd: root, stdio: 'pipe' });
   const files = walk(out).map((f) => relative(out, f).replace(/\\/g, '/'));
-  pages = files.filter((f) => f.endsWith('.html') && !/^(assets|pagefind|demo-assets)\//.test(f) && f !== 'demo-app.html');
+  pages = files.filter((f) => f.endsWith('.html') && !/^(assets|pagefind|demo)\//.test(f));
   examples = files.filter((f) => f.startsWith('assets/examples/')).map((f) => f.slice('assets/examples/'.length, -'.js'.length));
   const { server, url } = await serve(out, 0, PREFIX);
   base = url;
@@ -108,6 +108,33 @@ describe('the built site', () => {
     expect(untagged).toEqual([]);
   });
 
+  it('writes the whole page, hydratable, so that it is complete with no script, and the browser is sent only the code that does something', () => {
+    const page = (name: string) => readFileSync(join(out, name), 'utf8');
+    const lifecycle = page('guide/lifecycle.html');
+    // The page is one app inside the element that the browser takes over, with what the server made for reading, and the buttons as they are before a script.
+    expect(lifecycle).toContain('<div id="app" class="shell" data-root="../" data-pages="separate">');
+    for (const action of ['menu', 'search', 'theme']) expect(lifecycle, action).toContain(`data-action="${action}"`);
+    expect(lifecycle).toContain('<h2 id="mount">');
+    // What does something is an island, in the shell and in the text, and each has the markup the component makes.
+    for (const island of ['menu', 'search', 'theme', 'follow']) expect(lifecycle, island).toContain(`data-island="${island}"`);
+    expect(lifecycle).not.toContain('page-data');
+    const examples = page('start/getting-started.html');
+    expect(examples, 'what the server makes for an island is in a slot').toContain('data-slot="content"');
+    for (const island of ['example', 'code']) expect(examples, island).toContain('data-island="' + island + '"');
+    expect(examples).toMatch(/data-action="edit"[^>]*hidden/);
+    expect(examples).toMatch(/data-action="reset"[^>]*hidden/);
+    // An example's props carry what the browser needs to make it again, as JSON that cannot end its attribute, and not the code, which is the page's.
+    expect(examples).toMatch(/data-props="\{&quot;id&quot;:&quot;counter-with-two-buttons&quot;/);
+    expect(examples).not.toMatch(/data-props="[^"]*npm install pipis/);
+    // The one script is the page's, and the style sheet is linked: the editor and the search are loaded when asked, and the Markdown and the
+    // highlighter are not in it, because what makes the text is the server's.
+    const [, scriptPath] = /<script type="module" src="([^"]*)"/.exec(examples) ?? [];
+    expect(scriptPath).toMatch(/^\.\.?\/assets\/page-[\w-]+\.js$/);
+    expect(examples).toMatch(/<link rel="stylesheet" href="\.\.?\/assets\/page-[\w-]+\.css"/);
+    const script = readFileSync(join(out, 'start', scriptPath ?? ''), 'utf8');
+    for (const text of ['Lexer', 'renderCodeBlock', 'readFileSync']) expect(script, text).not.toContain(text);
+  });
+
   it('has links that go to a page and a heading that exist, and no page that nothing links to', () => {
     const ids = new Map<string, Set<string>>();
     const links = new Map<string, string[]>();
@@ -147,7 +174,7 @@ describe('the built site', () => {
     expect(files).toContain('assets/frame.html');
     expect(files).toContain('assets/lib/index.js');
     expect(files).toContain('pagefind/pagefind.js');
-    expect(files).toContain('demo-app.html');
+    expect(files).toContain('demo/demo-app.html');
     expect(files.filter((f) => /pagefind-.*ui|pagefind-highlight/.test(f))).toEqual([]);
     expect(
       files.some((f) => /^assets\/edit-.*\.js$/.test(f)),
@@ -156,21 +183,30 @@ describe('the built site', () => {
   });
 });
 
-/** A page, opened in a fresh tab with its errors collected. */
-async function open(path: string): Promise<{ page: Page; errors: string[] }> {
+/** A page of the site that is served at `at`, opened in a fresh tab with its errors collected. */
+async function openIn(at: string, path: string): Promise<{ page: Page; errors: string[] }> {
   const page = await (browser as Browser).newPage({ viewport: { width: 1280, height: 900 } });
   const errors: string[] = [];
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  // A warning is a problem too: it is how a hydration says that the page was not what the app makes.
+  page.on('console', (m) => ['error', 'warning'].includes(m.type()) && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('requestfailed', (r) => errors.push(`request failed: ${r.url()}`));
   page.on('response', (r) => r.status() >= 400 && errors.push(`${r.status()} ${r.url()}`));
-  await page.goto(base + path);
+  await page.goto(at + path);
   return { page, errors };
 }
 
+/** A page of the built site, opened in a fresh tab with its errors collected. */
+const open = (path: string) => openIn(base, path);
+
 /** Every iframe of the page loaded now, and the example in each shown. */
 async function showExamples(page: Page) {
-  await page.evaluate(() => document.querySelectorAll('iframe').forEach((f) => f.setAttribute('loading', 'eager')));
+  const wanted = await page.evaluate(() => {
+    document.querySelectorAll('iframe').forEach((f) => f.setAttribute('loading', 'eager'));
+    return document.querySelectorAll('iframe[src*="frame.html"]').length;
+  });
+  // The frames start to load a moment after they are asked to, and are in the page's frames once they have.
+  await expect.poll(() => page.frames().filter((f) => f.url().includes('frame.html')).length, { timeout: 15_000 }).toBe(wanted);
   for (const frame of page.frames()) {
     if (frame === page.mainFrame() || !frame.url().includes('frame.html')) continue;
     await frame.waitForFunction(() => (document.getElementById('root')?.childNodes.length ?? 0) > 0, undefined, { timeout: 15_000 });
@@ -191,17 +227,41 @@ describe('the dev server', () => {
       const index = await get('/');
       expect(index.status).toBe(200);
       expect(index.text).toContain('<h1');
-      expect(index.text, 'the page reloads when the pages are rebuilt').toContain('/@vite/client');
+      expect(index.text, 'the page reloads when the docs change').toContain('/@vite/client');
+      expect(index.text, 'the page is the app, and its script is served by Vite as any module is').toContain('virtual:docs-client');
+      // The style sheet is linked in the page, so that it is styled when it is painted and not when the script has run.
+      const [, sheet] = /<link rel="stylesheet" href="([^"]*)"/.exec(index.text) ?? [];
+      expect(sheet).toContain('virtual:docs/styles.css');
+      const css = await fetch(origin + (sheet ?? ''), { headers: { accept: 'text/css' } });
+      expect(css.headers.get('content-type')).toContain('text/css');
+      expect(await css.text()).toContain('.example-code');
       expect((await get('/guide/lifecycle.html')).status).toBe(200);
       expect((await get('/assets/frame.html')).status).toBe(200);
-      expect((await get('/assets/page.js')).status).toBe(200);
-      const demo = await get('/demo-app.html');
+      const demo = await get('/demo/demo-app.html');
       expect(demo.status).toBe(200);
-      expect(demo.text).toContain('/src/samples/demo.tsx');
+      expect(demo.text).toContain('src/samples/demo.tsx');
+      // The page is hydrated in a browser as Vite serves its modules, and the demo is served beside it by a Vite of its own.
+      const page = await (browser as Browser).newPage();
+      const problems: string[] = [];
+      page.on('console', (m) => ['error', 'warning'].includes(m.type()) && !/[vite]/.test(m.text()) && problems.push(m.text()));
+      page.on('pageerror', (e) => problems.push(e.message));
+      try {
+        await page.goto(origin + '/start/getting-started.html');
+        await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false, undefined, {
+          timeout: 60_000,
+        });
+        await page.locator('[data-action=theme]').click();
+        expect(await page.evaluate(() => document.documentElement.dataset.theme)).toMatch(/light|dark/);
+        expect(problems).toEqual([]);
+        await page.goto(origin + '/demo/demo-app.html#todo');
+        await page.waitForFunction(() => document.body.childElementCount > 0, undefined, { timeout: 60_000 });
+      } finally {
+        await page.close();
+      }
     } finally {
       await dev.close();
     }
-  }, 120_000);
+  }, 180_000);
 });
 
 describe('in a browser', () => {
@@ -235,12 +295,40 @@ describe('in a browser', () => {
 
       // The editor and the compiler are not in the page until they are asked for.
       expect(await page.locator('.editor').count()).toBe(0);
+      // The example's height from here on: starting to edit does not make it vanish and come back.
+      await page.evaluate(() => {
+        const el = document.querySelector('figure.example');
+        const sizes = [el?.getBoundingClientRect().height ?? 0];
+        Object.assign(window, { sizes });
+        if (el) new ResizeObserver(() => sizes.push(el.getBoundingClientRect().height)).observe(el);
+      });
       await figure.getByRole('button', { name: 'Edit' }).click();
       await page.waitForSelector('.editor[data-ready]');
+      await page.waitForTimeout(700);
+      const sizes: number[] = await page.evaluate(() => (window as unknown as { sizes: number[] }).sizes);
+      expect(Math.min(...sizes), `the example's height was ${sizes.join(', ')}`).toBeGreaterThan((sizes[0] ?? 0) - 40);
+      expect(await frame.locator('span').first().textContent(), 'the example is not run again for the code it already shows').toBe('0');
+      // The code that was written for reading, and its button, are replaced by the editor.
+      expect(await figure.locator('[data-slot]').isVisible()).toBe(false);
+      expect(await figure.locator('.example-code .copy').isVisible()).toBe(false);
 
       const code = await figure.locator('textarea').inputValue();
+      // While the frame is run again its container is never empty for a moment: that is what makes the example vanish and come back, and its height with it.
+      await frame.evaluate(() => {
+        const root = document.getElementById('root');
+        Object.assign(window, { emptied: 0 });
+        if (root) {
+          new MutationObserver(() => {
+            if (root.childNodes.length === 0) Object.assign(window, { emptied: (window as unknown as { emptied: number }).emptied + 1 });
+          }).observe(root, { childList: true });
+        }
+      });
       await figure.locator('textarea').fill(code.replace('reactive(0)', 'reactive(41)'));
       await expect.poll(() => frame.locator('span').first().textContent()).toBe('41');
+      expect(
+        await frame.evaluate(() => (window as unknown as { emptied: number }).emptied),
+        'the frame was empty as it was run again',
+      ).toBe(0);
 
       await figure.locator('textarea').fill('const = ;');
       await expect.poll(() => figure.locator('.example-error').isVisible()).toBe(true);
@@ -352,6 +440,76 @@ describe('in a browser', () => {
     }
   }, 60_000);
 
+  it('hydrates the page: it keeps every element the server wrote, says nothing, and shows the buttons that were hidden because there was no script', async () => {
+    const page = await (browser as Browser).newPage({ viewport: { width: 1280, height: 900 } });
+    const problems: string[] = [];
+    page.on('console', (m) => ['error', 'warning'].includes(m.type()) && problems.push(m.text()));
+    page.on('pageerror', (e) => problems.push(e.message));
+    // From when the page has been read until it is idle, every element that is put into the app or taken out of it.
+    await page.addInitScript(() => {
+      const changed: string[] = [];
+      Object.assign(window, { changed });
+      document.addEventListener('readystatechange', () => {
+        if (document.readyState !== 'interactive') return;
+        new MutationObserver((records) => {
+          for (const r of records) {
+            for (const n of [...r.addedNodes, ...r.removedNodes]) {
+              if (n instanceof Element && (r.target as Element).closest?.('#app'))
+                changed.push(`${n.nodeName.toLowerCase()} in ${(r.target as Element).nodeName.toLowerCase()}`);
+            }
+          }
+        }).observe(document, { childList: true, subtree: true });
+      });
+    });
+    try {
+      await page.goto(base + 'start/getting-started.html');
+      await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false);
+      await page.waitForTimeout(200);
+      expect(await page.evaluate(() => (window as unknown as { changed: string[] }).changed)).toEqual([]);
+      expect(problems).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('copies the code of a block, and says so', async () => {
+    const { page } = await open('start/getting-started.html');
+    try {
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      const copy = page.locator('.code .copy').first();
+      await copy.waitFor();
+      await copy.click();
+      await expect.poll(() => copy.textContent()).toBe('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('npm install pipis');
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('opens the navigation on a narrow screen', async () => {
+    const { page } = await open('guide/lifecycle.html');
+    try {
+      await page.setViewportSize({ width: 390, height: 800 });
+      expect(await page.locator('.side').isVisible()).toBe(false);
+      await page.locator('[data-action=menu]').click();
+      expect(await page.evaluate(() => document.body.classList.contains('menu-open'))).toBe(true);
+      expect(await page.locator('.side').isVisible()).toBe(true);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('marks the section that is being read in the contents', async () => {
+    const { page } = await open('guide/lifecycle.html');
+    try {
+      await page.locator('#mount').scrollIntoViewIfNeeded();
+      await page.evaluate(() => document.getElementById('mount')?.scrollIntoView());
+      await expect.poll(() => page.locator('.toc a[data-active]').first().getAttribute('href'), { timeout: 10_000 }).toBe('#mount');
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
   it('switches the theme, in the page and in its frames', async () => {
     const { page } = await open('start/getting-started.html');
     try {
@@ -386,4 +544,214 @@ describe('in a browser', () => {
       await page.close();
     }
   }, 60_000);
+});
+
+describe('in islands mode', () => {
+  // The same site, built so that the page's script mounts only the islands in it and does not hydrate the page (`mode: 'islands'`, in site/islands.config.ts): the page is
+  // the same, what does something works the same, and the code for the page's own components is not in the script.
+  const islandsOut = join(root, 'out', 'site-islands');
+  let islandsBase = '';
+  let islandsClose: (() => void) | undefined;
+
+  beforeAll(async () => {
+    execSync(`pnpm vp build --config site/islands.config.ts --outDir ${JSON.stringify(islandsOut)} --emptyOutDir`, {
+      cwd: root,
+      stdio: 'pipe',
+    });
+    const { server, url } = await serve(islandsOut, 0, PREFIX);
+    islandsBase = url;
+    islandsClose = () => server.close();
+  }, 180_000);
+
+  afterAll(() => islandsClose?.());
+
+  const script = (dir: string) => {
+    const html = readFileSync(join(dir, 'start/getting-started.html'), 'utf8');
+    const [, path] = /<script type="module" src="([^"]*)"/.exec(html) ?? [];
+    return readFileSync(join(dir, 'start', path ?? ''), 'utf8');
+  };
+
+  it('has a script without the page that the other mode hydrates, and the same islands', () => {
+    const hydrating = script(out);
+    const mounting = script(islandsOut);
+    // The page's own components (the navigation's label is in the shell) are what hydrating needs and mounting islands does not, and neither is the
+    // code that adopts what a server wrote: islands that are made again are the ordinary build of the library.
+    expect(hydrating).toContain('On this page');
+    expect(mounting).not.toContain('On this page');
+    expect(hydrating).toContain('did not match');
+    expect(mounting).not.toContain('did not match');
+    expect(mounting.length).toBeLessThan(hydrating.length);
+    for (const island of ['data-island', 'Copied']) expect(mounting, island).toContain(island);
+  });
+
+  it('works the same: the islands are mounted over what the server wrote, with no warning', async () => {
+    const page = await (browser as Browser).newPage({ viewport: { width: 1280, height: 900 } });
+    const problems: string[] = [];
+    page.on('console', (m) => ['error', 'warning'].includes(m.type()) && problems.push(m.text()));
+    page.on('pageerror', (e) => problems.push(e.message));
+    try {
+      await page.goto(islandsBase + 'start/getting-started.html');
+      await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false);
+      const before = await page.evaluate(() => document.documentElement.dataset.theme);
+      await page.locator('[data-action=theme]').click();
+      expect(await page.evaluate(() => document.documentElement.dataset.theme)).not.toBe(before);
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      const copy = page.locator('.code .copy').first();
+      await copy.click();
+      await expect.poll(() => copy.textContent()).toBe('Copied');
+      expect(problems).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+});
+
+describe('as a single page', () => {
+  // Every page of the Markdown on one page, in the order of the navigation, with the page made live as it is by default (hydrated). The same site, and
+  // the same components; what is different is that a page is a section, so its headings are named for it and a link to a page is a link to it here.
+  const singleOut = join(root, 'out', 'site-single');
+  let singleBase = '';
+  let singleClose: (() => void) | undefined;
+
+  beforeAll(async () => {
+    execSync(`pnpm vp build --config site/single.config.ts --outDir ${JSON.stringify(singleOut)} --emptyOutDir`, {
+      cwd: root,
+      stdio: 'pipe',
+    });
+    const { server, url } = await serve(singleOut, 0, PREFIX);
+    singleBase = url;
+    singleClose = () => server.close();
+  }, 180_000);
+
+  afterAll(() => singleClose?.());
+
+  it('is one page with a section for every page of the docs, and no search index', () => {
+    const files = walk(singleOut).map((f) => relative(singleOut, f).replace(/\\/g, '/'));
+    const html = files.filter((f) => f.endsWith('.html') && !/^(assets|demo)\//.test(f));
+    expect(html).toEqual(['index.html']);
+    expect(
+      files.some((f) => f.startsWith('pagefind/')),
+      'the find of the browser is the search',
+    ).toBe(false);
+    const docs = join(root, 'docs');
+    const sections = [...readFileSync(join(singleOut, 'index.html'), 'utf8').matchAll(/<article id="([^"]+)"/g)].map((m) => m[1]);
+    expect(sections.length).toBe(markdownFiles(docs).length);
+    expect(new Set(sections).size, 'each section has a name of its own').toBe(sections.length);
+    // The examples are the same, and their frames are served from the same place.
+    expect(files.filter((f) => f.startsWith('assets/examples/')).length).toBe(examples.length);
+    // What the navigation lists comes first: the first section is the first page of the navigation, not the first file.
+    expect(sections[0]).toBe('start-introduction');
+  });
+
+  it('names every heading for its page, and every link finds its place', async () => {
+    const { page, errors } = await openIn(singleBase, '');
+    try {
+      const problems = await page.evaluate(() => {
+        const ids = [...document.querySelectorAll('[id]')].map((e) => e.id);
+        const seen = new Set<string>();
+        const found: string[] = [];
+        for (const id of ids) {
+          if (seen.has(id)) found.push(`'${id}' is the name of more than one element`);
+          seen.add(id);
+        }
+        for (const a of document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')) {
+          const target = decodeURIComponent(a.hash.slice(1));
+          if (target && !document.getElementById(target)) found.push(`'${a.hash}' goes nowhere`);
+        }
+        return found;
+      });
+      expect(problems).toEqual([]);
+      expect(errors).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('hydrates, and has the islands that it should: no search, and a navigation that follows what is read', async () => {
+    const { page, errors } = await openIn(singleBase, '');
+    try {
+      await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false, undefined, {
+        timeout: 30_000,
+      });
+      expect(await page.locator('[data-action=search]').count(), 'a single page has the find of the browser').toBe(0);
+      expect(await page.locator('.toc').count()).toBe(0);
+      // Reading another page moves the mark in the navigation to it.
+      await page.evaluate(() => document.getElementById('guide-lifecycle')?.scrollIntoView());
+      await expect
+        .poll(() => page.locator('.side a[aria-current=page]').first().getAttribute('href'), { timeout: 10_000 })
+        .toBe('#guide-lifecycle');
+      // A link in the navigation goes to the page on this one.
+      await page.locator('.side a[href="#guide-hydration"]').click();
+      await expect.poll(() => page.evaluate(() => location.hash)).toBe('#guide-hydration');
+      await expect
+        .poll(() => page.evaluate(() => document.getElementById('guide-hydration')?.getBoundingClientRect().top ?? 9999), {
+          timeout: 10_000,
+        })
+        .toBeLessThan(200);
+      expect(errors).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('runs an example, and copies code, as a page of its own does', async () => {
+    const { page } = await openIn(singleBase, '#start-getting-started');
+    try {
+      await page.evaluate(() => document.querySelectorAll('iframe').forEach((f) => f.setAttribute('loading', 'eager')));
+      await expect
+        .poll(() => page.frames().filter((f) => f.url().includes('frame.html#counter-with-two-buttons')).length, { timeout: 30_000 })
+        .toBe(1);
+      const frame = page.frames().find((f) => f.url().includes('frame.html#counter-with-two-buttons'));
+      await expect.poll(() => frame?.locator('span').first().textContent(), { timeout: 30_000 }).toBe('0');
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      const copy = page.locator('#start-getting-started .code .copy').first();
+      await copy.click();
+      await expect.poll(() => copy.textContent()).toBe('Copied');
+    } finally {
+      await page.close();
+    }
+  }, 90_000);
+
+  it('is served by the development server as the one page', async () => {
+    const dev = await createServer({
+      root,
+      configFile: join(root, 'site/single.config.ts'),
+      logLevel: 'silent',
+      server: { port: 0, host: '127.0.0.1' },
+    });
+    await dev.listen();
+    try {
+      const address = dev.httpServer?.address();
+      const origin = `http://127.0.0.1:${typeof address === 'object' && address ? address.port : 0}`;
+      const index = await fetch(`${origin}/`);
+      expect(index.status).toBe(200);
+      expect(((await index.text()).match(/<article id=/g) ?? []).length).toBe(markdownFiles(join(root, 'docs')).length);
+      expect((await fetch(`${origin}/guide/lifecycle.html`)).status, 'there is no other page').toBe(404);
+    } finally {
+      await dev.close();
+    }
+  }, 120_000);
+
+  it('can be made live with islands only, which is the same site with the other choice', async () => {
+    const both = join(root, 'out', 'site-single-islands');
+    execSync(`pnpm vp build --config site/single-islands.config.ts --outDir ${JSON.stringify(both)} --emptyOutDir`, {
+      cwd: root,
+      stdio: 'pipe',
+    });
+    const { server, url } = await serve(both, 0, PREFIX);
+    const { page, errors } = await openIn(url, '');
+    try {
+      await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false, undefined, {
+        timeout: 30_000,
+      });
+      await page.evaluate(() => document.getElementById('guide-lifecycle')?.scrollIntoView());
+      await expect
+        .poll(() => page.locator('.side a[aria-current=page]').first().getAttribute('href'), { timeout: 10_000 })
+        .toBe('#guide-lifecycle');
+      expect(errors).toEqual([]);
+    } finally {
+      await page.close();
+      server.close();
+    }
+  }, 240_000);
 });

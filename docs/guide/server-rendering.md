@@ -79,7 +79,7 @@ Other tools are given the same condition:
 
 Everything else is the browser's by default, so a plain Node script, a test in jsdom and an ordinary browser bundle need no setting. If a server build is missing the condition, the first element it renders throws `document is not defined`, and `renderToString` itself says which setting is missing. It never renders the wrong thing without saying.
 
-For a static site, render each page and write the file. This is how this site is built (see `site/build.ts` in the repository):
+For a static site, render each page and write the file. This is how this site is built (the build, in `docs-kit/vite.ts` in the repository, renders each page with the site's `render` and writes it):
 
 ```ts
 import { mkdirSync, writeFileSync } from 'node:fs';
