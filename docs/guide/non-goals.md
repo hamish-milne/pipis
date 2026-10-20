@@ -1,3 +1,7 @@
+---
+description: What pipis does not do, and the trade-offs that follow from how it is built.
+tags: [dynamic-ui, performance, ssr]
+---
 # Caveats and non-goals
 
 What pipis does not do, and the trade-offs that follow from how it is built. If you expect something here to work, it is better to know now.

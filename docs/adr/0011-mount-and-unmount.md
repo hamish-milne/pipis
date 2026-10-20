@@ -1,3 +1,6 @@
+---
+tags: [lifecycle, testing]
+---
 # 11. Mounting is idempotent and unmounting leaves nothing behind
 
 **Decision.** An element is a function `(parent?, sibling?)`. Called with a parent it mounts, with nothing it unmounts. Mounting again at

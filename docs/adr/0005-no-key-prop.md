@@ -1,3 +1,6 @@
+---
+tags: [dynamic-ui, react]
+---
 # 5. There is no `key` prop
 
 **Decision.** Elements have no `key`. A static array rendered with `.map()` needs none, and a list that changes uses `List` with an

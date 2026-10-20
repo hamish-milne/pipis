@@ -1,3 +1,7 @@
+---
+description: The details that are easy to get wrong, and how to get them right.
+tags: [reactivity, dynamic-ui, types]
+---
 # Patterns and pitfalls
 
 A collection of non-obvious details worth knowing, found while building the example apps and testing the library.

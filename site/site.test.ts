@@ -87,6 +87,27 @@ describe('the built site', () => {
     expect(html.match(/aria-label="Link to this section"/g)?.length, 'every heading has a link to itself').toBeGreaterThan(3);
   });
 
+  it('tags every page for the search: its section, its topics from the front matter, and what it is for', () => {
+    const page = (name: string) => readFileSync(join(out, name), 'utf8');
+    const lifecycle = page('guide/lifecycle.html');
+    expect(lifecycle).toContain('data-pagefind-filter="section:Guide"');
+    for (const tag of ['lifecycle', 'effects', 'performance']) expect(lifecycle).toContain(`data-pagefind-filter="tag:${tag}"`);
+    expect(lifecycle).toContain('content="Construct, mount, update, move and unmount: what runs when."');
+    expect(lifecycle).toContain('data-pagefind-meta="description:Construct, mount, update, move and unmount: what runs when."');
+    // A design decision is in the section of its folder, and has the topics it was given.
+    expect(page('adr/0007-effects.html')).toContain('data-pagefind-filter="section:Reference"');
+    expect(page('adr/0007-effects.html')).toContain('data-pagefind-filter="tag:effects"');
+    // Every page is in a section, and every page but the indexes and the home page has a topic.
+    const untagged = pages.filter((p) => {
+      const html = page(p);
+      return (
+        !html.includes('data-pagefind-filter="section:') ||
+        (!html.includes('data-pagefind-filter="tag:') && !/(^|\/)(index|README)\.html$/.test(p) && p !== 'index.html')
+      );
+    });
+    expect(untagged).toEqual([]);
+  });
+
   it('has links that go to a page and a heading that exist, and no page that nothing links to', () => {
     const ids = new Map<string, Set<string>>();
     const links = new Map<string, string[]>();
@@ -263,6 +284,43 @@ describe('in a browser', () => {
       await page.waitForLoadState('load');
       expect(page.url().startsWith(base), `the result is under the site's own path: ${page.url()}`).toBe(true);
       expect(await page.locator('article h1').count()).toBe(1);
+      expect(errors).toEqual([]);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('narrows a search by section and by topic, and lists the pages of a topic when nothing is typed', async () => {
+    const { page, errors } = await open('guide/lifecycle.html');
+    try {
+      await page.keyboard.press('Control+k');
+      const dialog = page.locator('dialog.search');
+      // The chips are there before anything is typed, with how many pages each has.
+      await dialog.locator('[data-filter=section] .search-chip', { hasText: /^Guide\d+/ }).waitFor({ timeout: 15_000 });
+      const hrefs = () => dialog.locator('.search-results a').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+      expect(await dialog.locator('.search-results li').count(), 'nothing is listed until something is asked').toBe(0);
+
+      // A topic alone lists the pages that have it.
+      await dialog.locator('[data-filter=tag] .search-chip', { hasText: /^ssr\d+/ }).click();
+      await expect.poll(async () => (await hrefs()).length).toBeGreaterThanOrEqual(3);
+      expect((await hrefs()).some((h) => h.endsWith('guide/server-rendering.html'))).toBe(true);
+      for (const where of await dialog.locator('.search-where').allTextContents()) expect(where).toContain('ssr');
+
+      // A section narrows it to the pages in that section.
+      await dialog.locator('[data-filter=section] .search-chip', { hasText: /^Guide\d+/ }).click();
+      await expect.poll(async () => (await hrefs()).every((h) => h.includes('/guide/')) && (await hrefs()).length > 0).toBe(true);
+      expect(await dialog.locator('[data-filter=section] .search-chip[aria-pressed=true]').count()).toBe(1);
+
+      // Words are searched among what is left, and the pages that match are the ones that have the topic, in the section.
+      await dialog.locator('input').fill('render');
+      await expect.poll(async () => (await hrefs()).length).toBeGreaterThan(0);
+      expect((await hrefs()).every((h) => h.includes('/guide/'))).toBe(true);
+
+      // Taking the chips off widens it again; with nothing typed and nothing chosen, nothing is listed.
+      await dialog.locator('input').fill('');
+      await dialog.locator('[data-filter=section] .search-chip', { hasText: /^All/ }).click();
+      await dialog.locator('[data-filter=tag] .search-chip[aria-pressed=true]').click();
+      await expect.poll(() => dialog.locator('.search-results li').count()).toBe(0);
       expect(errors).toEqual([]);
     } finally {
       await page.close();

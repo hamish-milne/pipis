@@ -1,3 +1,7 @@
+---
+description: State, derived values, and how a value reaches the DOM.
+tags: [reactivity, components, styling]
+---
 # Reactive values
 
 A reactive value is something that holds a value and tells its subscribers when it changes. This page covers the built-in ones, how to derive one from another, and how a reactive value reaches the DOM.

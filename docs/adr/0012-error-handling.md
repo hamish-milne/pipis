@@ -1,3 +1,6 @@
+---
+tags: [errors]
+---
 # 12. Errors go to the handler that was current when the subscription was made
 
 **Decision.** `handleError(fn)` captures the error handler that is current when it is called, not when `fn` throws. An `ErrorBoundary`

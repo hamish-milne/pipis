@@ -1,3 +1,6 @@
+---
+description: The design assumptions of pipis, one record each, with the evidence that could show them wrong.
+---
 # Architecture decision records
 
 Each record states one design assumption of pipis, why it was made, the evidence that could show it wrong (a test or a measurement,

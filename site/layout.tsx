@@ -92,8 +92,15 @@ export function Page(props: { page: PageModel }): JSXElement {
       </header>
       <Navigation nav={page.nav} page={page} />
       <main>
-        {/* What the search reads of a page is what is inside this element. */}
-        <article data-pagefind-body="">
+        {/* What the search reads of a page is what is inside this element, and how it can be narrowed: by the section the page is in, and by its tags. */}
+        <article
+          data-pagefind-body=""
+          data-pagefind-filter={`section:${page.section}`}
+          data-pagefind-meta={`description:${page.description}`}
+        >
+          {page.tags.map((tag) => (
+            <span hidden data-pagefind-filter={`tag:${tag}`} />
+          ))}
           <Markdown tokens={page.tokens} renderer={docsRenderer(page.root, page.sourceRoot)} />
         </article>
         <Pager previous={page.previous} next={page.next} page={page} />

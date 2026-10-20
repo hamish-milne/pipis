@@ -1,3 +1,7 @@
+---
+description: What pipis is, how it differs from other frameworks, and what it costs in bytes.
+tags: [getting-started, size, react]
+---
 # Introduction
 
 _pipis_ is a small front-end framework for building UIs in JSX, with no virtual DOM and no build magic. You write components as you would in React, but a component runs once, and a state change goes straight to the DOM node that shows it: nothing else re-runs.

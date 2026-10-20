@@ -1,3 +1,7 @@
+---
+description: Using pipis with state libraries, Observables and libraries that draw into an element.
+tags: [interop, types]
+---
 # Cookbook
 
 A collection of recipes for using other libraries with pipis: state libraries and Observables through `adapt`, and libraries that draw into an element.

@@ -1,3 +1,7 @@
+---
+description: Whole apps built with pipis, running here, each with its source.
+tags: [demo]
+---
 # Demos
 
 Whole apps built with pipis, running here, each with its source. The examples in the guide are small and show one thing; these show how the pieces fit together.

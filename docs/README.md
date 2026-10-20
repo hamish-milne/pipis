@@ -1,3 +1,7 @@
+---
+description: A small front-end framework for JSX with no virtual DOM and no re-rendering. The guide, the reference and the design decisions start here.
+tags: [getting-started]
+---
 # pipis documentation
 
 A small front-end framework for JSX: no virtual DOM, no re-rendering, and a component that runs once.

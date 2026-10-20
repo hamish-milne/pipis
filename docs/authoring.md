@@ -1,3 +1,7 @@
+---
+description: How a code block becomes a live example, how this documentation site is built, and what is checked on every change.
+tags: [docs, tooling]
+---
 # Writing documentation
 
 This page is for people who write the docs. It describes the one convention that matters: how a code block becomes a **live example**, and what is checked on every change.
@@ -68,7 +72,27 @@ What a page gets from the Markdown:
 - `height=N` fixes the height of the frame; without it the frame follows the height of its content.
 - A block whose language is `demo` names a demo app of `src/samples/` (its body is the file name without the extension: `todo`). The site shows the app in a frame with its source below. To GitHub it is a plain block that names the demo.
 - A heading has the anchor that GitHub gives it, and a link to another `.md` file becomes a link to its page. A link to a file outside `docs/` (such as `../LLM.md`) goes to that file in the repository.
-- The search reads the text of each page. **Ctrl+K** (or **⌘K**) opens it.
+- The search reads the text of each page. **Ctrl+K** (or **⌘K**) opens it. Pages are tagged for it, so that a reader can narrow a search by where a page is and by what it is about, or choose a topic and see its pages with nothing typed (see Front matter below).
+
+### Front matter
+
+A page may begin with front matter: a few lines between `---` fences that say what the search and the page's head should know about it. GitHub shows it as a table above the page, so the page reads on both.
+
+```md
+---
+description: What the page is for, in a sentence.
+tags: [reactivity, state]
+---
+# The page
+```
+
+| Key           | Meaning                                                                                                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `description` | What the page is for. It is the page's `<meta name="description">` and what the search shows under a topic. Without it, the first paragraph is used. Do not put a link in it.        |
+| `tags`        | The topics of the page, a list in brackets. Each is one of the words in `site/tags.ts`: a page with another is an error when the site is built, so a tag is a decision, not a typo. |
+| `section`     | The part of the docs the page is in. Without it, the section of the navigation that lists the page, or of a page in its folder (so the design decisions are in Reference).        |
+
+Anything else, a key twice, or a line that is not `key: value` is an error that names the line. The search's filters are made from these: a section is one choice and topics add up, with how many pages each leaves.
 
 The site is split in two. `docs-kit/` is the engine: it reads Markdown into tokens, and knows pages, navigation, frames, the editor and the search, and nothing of pipis. `site/` is this site, written as a pipis app: a page is the `Document` component, which renders the whole HTML document (the head, the layout and `Markdown`, a component that makes elements from the tokens, with a renderer that gives a heading its anchor, highlights code and makes a `live` block an `Example`). The build renders it to HTML for each page as an app's server would ([Server rendering](guide/server-rendering.md)). The rest of `site/` is its style sheet and `site/adapter.ts`, the few lines that mount an example's default export in a frame. Another library's docs are the same kit with a different adapter and components. `site/site.test.ts` builds the site under a path of its own and uses it in Chromium: every page is opened, every example run, one edited, the search used, the theme switched.
 

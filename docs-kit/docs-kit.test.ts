@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { parseNav } from './nav.ts';
+import { sectionOf } from './build.ts';
 import { decodeEntities } from './entities.ts';
+import { readFrontmatter } from './frontmatter.ts';
 import { pageUrl, parsePage, relativeUrl, type DocCode, type DocHeading, type PageContext } from './markdown.ts';
 import type { Tokens } from 'marked';
 import { toJs } from './transform.ts';
@@ -133,6 +135,59 @@ describe('character references', () => {
     expect(decodeEntities('a &amp; b &lt;c&gt; &quot;d&quot; &#39;e&#39; &#x41; &copy; &unknownthing; &#0; &#99999999;')).toBe(
       'a & b <c> "d" \'e\' A © &unknownthing; &#0; &#99999999;',
     );
+  });
+});
+
+describe('front matter', () => {
+  it('reads the description, the tags and the section, and leaves the page with the lines it had', () => {
+    const text = [
+      '---',
+      'description: What it is: a page.',
+      'tags: [one, two-words, "three"]',
+      "section: 'For people'",
+      '---',
+      '# Title',
+      '',
+    ].join('\n');
+    const { data, body } = readFrontmatter(text, 'a.md');
+    expect(data).toEqual({ description: 'What it is: a page.', tags: ['one', 'two-words', 'three'], section: 'For people' });
+    expect(body.split('\n').length, 'the lines of the file are the lines of the page').toBe(text.split('\n').length);
+    expect(body.trim()).toBe('# Title');
+    expect(body.split('\n')[5]).toBe('# Title');
+  });
+
+  it('is not there when a page does not begin with it', () => {
+    expect(readFrontmatter('# Title\n\n---\nnot: front matter\n---\n', 'a.md')).toEqual({
+      data: { tags: [] },
+      body: '# Title\n\n---\nnot: front matter\n---\n',
+    });
+  });
+
+  it('refuses what it does not understand, naming the line', () => {
+    const read =
+      (...lines: string[]) =>
+      () =>
+        readFrontmatter(['---', ...lines, '---', ''].join('\n'), 'x.md');
+    expect(read('tags: [a]', 'tgs: [b]')).toThrow(/x\.md:3: unknown key 'tgs' in the front matter \(keys: description, tags, section\)/);
+    expect(read('tags: a, b')).toThrow(/x\.md:2: tags are a list in brackets/);
+    expect(read('tags: [Upper]')).toThrow(/x\.md:2: the tag 'Upper' is not lowercase words joined by hyphens/);
+    expect(read('tags: [a, a]')).toThrow(/x\.md:2: a tag is in the list twice/);
+    expect(read('description: one', 'description: two')).toThrow(/x\.md:3: 'description' is in the front matter twice/);
+    expect(read('description:')).toThrow(/x\.md:2: 'description' has no value/);
+    expect(read('just some words')).toThrow(/x\.md:2: cannot read 'just some words'/);
+    expect(() => readFrontmatter('---\ntags: [a]\n# Title\n', 'x.md')).toThrow(/x\.md:1: the front matter is never closed/);
+  });
+});
+
+describe('the section of a page', () => {
+  const nav = parseNav('## Guide\n- [One](guide/one.md)\n\n## Reference\n- [Decisions](adr/README.md)\n');
+
+  it('is what its front matter says, else the section it is listed in, else the section of a page in its folder', () => {
+    expect(sectionOf('guide/one.md', 'Chosen', nav)).toBe('Chosen');
+    expect(sectionOf('guide/one.md', undefined, nav)).toBe('Guide');
+    expect(sectionOf('adr/0001-a-decision.md', undefined, nav)).toBe('Reference');
+    expect(sectionOf('elsewhere/page.md', undefined, nav)).toBe('Documentation');
+    expect(sectionOf('README.md', undefined, nav)).toBe('Documentation');
   });
 });
 

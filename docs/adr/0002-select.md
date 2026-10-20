@@ -1,3 +1,6 @@
+---
+tags: [reactivity, performance]
+---
 # 2. `select` takes two arguments, computes per subscriber, and is not shared
 
 **Decision.** `select(input, compute)` or `select(input, key)` derives a read-only reactive from exactly one input. It notifies only

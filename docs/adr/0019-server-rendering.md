@@ -1,3 +1,6 @@
+---
+tags: [ssr, platform, size]
+---
 # 19. The server is another build of `pipis`, chosen by the bundler
 
 **Decision.** What the nodes of an element are made with is a _platform_, and there are two. `platform.client.ts` is the document's own,

@@ -1,3 +1,6 @@
+---
+tags: [svg, types]
+---
 # 13. HTML is tried first, then SVG; MathML is not supported
 
 **Decision.** `createElement` creates an HTML element with `document.createElement`, and if the tag is not an HTML element (the result is

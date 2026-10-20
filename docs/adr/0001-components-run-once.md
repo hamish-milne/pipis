@@ -1,3 +1,6 @@
+---
+tags: [components, reactivity, performance]
+---
 # 1. A component runs once
 
 **Decision.** A component function runs when it is created and never again. It returns an element (a function that mounts and

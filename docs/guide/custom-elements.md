@@ -1,3 +1,7 @@
+---
+description: Writing your own element, and the head it returns.
+tags: [components, lifecycle]
+---
 # Custom elements
 
 Most apps build elements from components and HTML tags. You can also write your own element function, to implement something the built-in ones do not, or to work on the DOM directly. An element made this way is used in JSX like any other. One that creates nodes with `document` is for the browser: a server has no `document` (see [Server rendering](server-rendering.md)).

@@ -1,3 +1,6 @@
+---
+tags: [async]
+---
 # 14. `Suspense`: the latest promise wins
 
 **Decision.** When the `promise` of a `Suspense` is a reactive and is reassigned, a promise that has been replaced is stale: however and

@@ -1,3 +1,6 @@
+---
+tags: [platform, tooling]
+---
 # 16. The platform floor is ES2015 for APIs; the syntax is the app's bundler's to lower
 
 **Decision.** A library module calls only built-ins and DOM APIs that ES2015 browsers have, and uses no Node types. That is the lowest

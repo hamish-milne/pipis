@@ -1,3 +1,7 @@
+---
+description: Rendering components to HTML on a server or at build time, and getting data to the browser.
+tags: [ssr, platform, async]
+---
 # Server rendering
 
 This page is for rendering pipis components to HTML on a server, or at build time to make a static site: the markup a visitor sees before any script has run, and what a search engine reads. The documentation you are reading is made this way.

@@ -1,3 +1,7 @@
+---
+description: What you know from React, in pipis terms.
+tags: [react, components, reactivity]
+---
 # Comparison with React
 
 If you know React, this page maps what you know onto pipis. The biggest difference is that a component runs **once**: there is no re-rendering, so a value that changes has to be reactive, and the JSX shows the reactive value itself and not a copy of what it held when the component ran.

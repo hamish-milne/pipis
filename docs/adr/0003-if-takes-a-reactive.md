@@ -1,3 +1,6 @@
+---
+tags: [dynamic-ui, types]
+---
 # 3. `If` takes a reactive boolean, and anything computed is a `select`
 
 **Decision.** `If` takes a `Reactive<boolean>` and nothing else. A condition made from state is a `select`, and a plain `&&` or ternary

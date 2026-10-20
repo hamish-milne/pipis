@@ -1,3 +1,7 @@
+---
+description: Effects, Suspense, portals, the document head, error boundaries and context.
+tags: [effects, async, errors, lifecycle]
+---
 # Utilities
 
 The elements and functions for the things an app needs beyond state and structure: running code when something mounts or changes, loading data, rendering somewhere else in the document, handling errors, and passing a value down the tree.

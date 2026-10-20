@@ -1,3 +1,7 @@
+---
+description: Every export of the package, with its signature. Generated from the source.
+tags: [types]
+---
 # API reference
 
 Every export of the package, with its signature and what it does. This page is generated from the library's declarations and doc comments by `node tools/api.ts --out docs/reference/api.md`: do not edit it by hand.

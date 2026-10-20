@@ -12,6 +12,7 @@ import { bundle } from '../tools/bundle.ts';
 import { LIBRARY } from '../tools/deps.ts';
 import { stripToJs } from '../tools/strip-types.ts';
 import { repoFiles, repoHome, siteTitle } from './config.ts';
+import { TAGS } from './tags.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = (name: string) => join(root, 'src/pipis', name);
@@ -75,6 +76,7 @@ export async function build(out = 'dist', clean = true) {
     adapter: 'site/adapter.ts',
     document: await loadLayout(),
     styles: ['site/site.css'],
+    tags: TAGS,
     clean,
   });
   return built;

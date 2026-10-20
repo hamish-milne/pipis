@@ -1,3 +1,7 @@
+---
+description: Construct, mount, update, move and unmount: what runs when.
+tags: [lifecycle, effects, performance]
+---
 # Lifecycle
 
 Components and elements have a lifecycle that follows the lifecycle of the platform underneath them, JavaScript and the DOM. This page walks through it, and says what belongs in each step.

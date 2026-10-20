@@ -1,3 +1,6 @@
+---
+tags: [interop, reactivity]
+---
 # 10. `adapt` makes a Reactive from another library's store, signal or Observable
 
 **Decision.** A `Reactive<T>` gives its subscriber the current value as soon as it is subscribed to, and `subscribe` returns a cleanup

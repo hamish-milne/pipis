@@ -1,3 +1,6 @@
+---
+tags: [events, react]
+---
 # 8. Events use the native lowercase property names
 
 **Decision.** `onclick`, `oninput`, `onsubmit`: the DOM's own property names, assigned as properties. React's `onClick` is not

@@ -166,6 +166,51 @@ dialog.search input {
 .search-results strong {
   display: block;
 }
+.search-results .search-where {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+.search-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.search-filters[hidden] {
+  display: none;
+}
+.search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.search-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.1rem 0.6rem;
+  font: inherit;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.search-chip:hover {
+  color: var(--fg);
+  border-color: var(--accent);
+}
+.search-chip[aria-pressed='true'] {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.search-count {
+  opacity: 0.7;
+}
 .search-results span {
   display: block;
   font-size: 0.875rem;

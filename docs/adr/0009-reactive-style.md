@@ -1,3 +1,6 @@
+---
+tags: [styling, reactivity]
+---
 # 9. `style` is reactive one property at a time
 
 **Decision.** `style` is an object with one entry per CSS property. Each value is a string with units or a `Reactive<string>`. The

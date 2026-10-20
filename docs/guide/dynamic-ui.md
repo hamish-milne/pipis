@@ -1,3 +1,7 @@
+---
+description: Showing, choosing, listing and rebuilding content with If, OneOf, List, ReactiveList and Dynamic.
+tags: [dynamic-ui, performance]
+---
 # Dynamic UI
 
 Most apps do not have a fully dynamic layout, with elements of an unknown structure and quantity made at run time. They have a mostly static structure with dynamic content, and pipis is built for that. This page covers the elements for the cases where the structure itself changes: `If`, `OneOf`, `List`, `ReactiveList` and `Dynamic`.

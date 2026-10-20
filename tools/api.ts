@@ -224,6 +224,11 @@ export function load(): { declarations: Declaration[]; problems: string[] } {
 /** The reference, as Markdown. */
 export function reference(declarations: Declaration[]): string {
   const out: string[] = [
+    // The front matter the documentation site reads (docs/authoring.md): what the page is for, and its topic.
+    '---',
+    'description: Every export of the package, with its signature. Generated from the source.',
+    'tags: [types]',
+    '---',
     '# API reference',
     '',
     "Every export of the package, with its signature and what it does. This page is generated from the library's declarations and doc comments by `node tools/api.ts --out docs/reference/api.md`: do not edit it by hand.",

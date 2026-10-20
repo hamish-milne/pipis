@@ -1,3 +1,7 @@
+---
+description: Install pipis, set up JSX, and build a small app.
+tags: [getting-started, components]
+---
 # Getting started
 
 This page installs pipis, sets up JSX, and builds a small app. It assumes TypeScript and a bundler such as Vite; neither is required by the library itself.

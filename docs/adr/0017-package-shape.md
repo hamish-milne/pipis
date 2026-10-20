@@ -1,3 +1,6 @@
+---
+tags: [packaging, tooling]
+---
 # 17. The package ships its own source, with the types blanked out
 
 **Decision.** `tools/pack.ts` builds the tarball. Each library module's JavaScript is its source with the types removed by Node's own type

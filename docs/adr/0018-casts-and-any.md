@@ -1,3 +1,6 @@
+---
+tags: [types, tooling]
+---
 # 18. Casts and `any` in the library are owned in writing
 
 **Decision.** In a library module, `as` casts are an error (`typescript/consistent-type-assertions` with `assertionStyle: 'never'`) and so is

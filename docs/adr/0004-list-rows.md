@@ -1,3 +1,6 @@
+---
+tags: [dynamic-ui, performance]
+---
 # 4. `List` for items that do not change, `ReactiveList` for rows that do
 
 **Decision.** There are two list elements, built on one internal function that keeps rows keyed by `itemKey`, adds, removes and reorders

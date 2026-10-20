@@ -1,3 +1,6 @@
+---
+tags: [reactivity, performance]
+---
 # 6. Updates are synchronous and unbatched
 
 **Decision.** Writing `.value` notifies every subscriber, in the order they subscribed, before the assignment returns. Nothing is

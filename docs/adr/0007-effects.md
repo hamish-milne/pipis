@@ -1,3 +1,6 @@
+---
+tags: [effects, lifecycle]
+---
 # 7. An `Effect` runs on mount, cleans up on unmount, and goes first
 
 **Decision.** `effect(fn)` runs `fn` when it is mounted and its returned cleanup when it is unmounted. An effect that returns no cleanup

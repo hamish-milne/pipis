@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { rolldown } from 'rolldown';
 import * as pagefind from 'pagefind';
 import { markdownFiles } from '../tools/docs.ts';
+import { readFrontmatter } from './frontmatter.ts';
 import { parsePage, relativeUrl, pageUrl, type Heading } from './markdown.ts';
 import { parseNav, type NavItem, type NavSection } from './nav.ts';
 import { THEME_SCRIPT } from './theme.ts';
@@ -28,8 +29,12 @@ export interface PageModel {
   tokens: Token[];
   /** The repository's folder, for what a page shows that is not Markdown (the source of a demo). */
   sourceRoot: string;
-  /** What the page is about, as text. */
+  /** What the page is about, as text: what its front matter says, or its first paragraph. */
   description: string;
+  /** The part of the documentation the page is in: `Guide`. The search can narrow by it. */
+  section: string;
+  /** The topics of the page, from its front matter. The search can narrow by them. */
+  tags: string[];
   /** What JSX compiles to calls of: the examples' library. */
   jsxImportSource: string;
   /** Where the pages get their style and script from, as links from this page. */
@@ -69,6 +74,8 @@ export interface SiteOptions {
   document(page: PageModel): string;
   /** CSS beyond the kit's own, in order. */
   styles: string[];
+  /** The tags that a page may have. A page with another is an error, so that a tag is not made by a typo. Any, if this is not given. */
+  tags?: string[];
   /** Empty the output folder first (the default). Not when something else has written there, as Vite has the demos. */
   clean?: boolean;
 }
@@ -135,6 +142,18 @@ function frame(options: SiteOptions): string {
   );
 }
 
+/**
+ * The part of the documentation a page is in: what its front matter says, else the section of the navigation it is listed in, else that of
+ * a page in its folder (the design decisions are in `adr/`, and the index of them is in the navigation).
+ */
+export function sectionOf(file: string, given: string | undefined, nav: NavSection[]): string {
+  if (given) return given;
+  const own = nav.find((s) => s.items.some((i) => i.file === file));
+  const folder = posix.dirname(file);
+  const neighbour = folder === '.' ? undefined : nav.find((s) => s.items.some((i) => posix.dirname(i.file) === folder));
+  return (own ?? neighbour)?.title ?? 'Documentation';
+}
+
 export async function buildSite(options: SiteOptions): Promise<Built> {
   const docs = join(options.root, options.docs);
   const out = resolve(options.root, options.out);
@@ -151,7 +170,13 @@ export async function buildSite(options: SiteOptions): Promise<Built> {
     const file = relative(docs, path).replace(/\\/g, '/');
     const url = pageUrl(file);
     const root = posix.relative(posix.dirname(url), '.') === '' ? './' : `${posix.relative(posix.dirname(url), '.')}/`;
-    const rendered = parsePage(readFileSync(path, 'utf8').replace(/\r\n/g, '\n'), { file, repoUrl: options.repoUrl });
+    const { data, body } = readFrontmatter(readFileSync(path, 'utf8').replace(/\r\n/g, '\n'), file);
+    for (const tag of data.tags) {
+      if (options.tags && !options.tags.includes(tag)) {
+        throw new Error(`${file}: the tag '${tag}' is not one of the site's tags (${options.tags.join(', ')})`);
+      }
+    }
+    const rendered = parsePage(body, { file, repoUrl: options.repoUrl });
     for (const block of rendered.examples) {
       write(join(assets, 'examples', `${block.id}.js`), toJs(block.code, options.jsxImportSource));
       examples.push(block.id);
@@ -165,7 +190,9 @@ export async function buildSite(options: SiteOptions): Promise<Built> {
       repoHome: options.repoHome,
       sourceRoot: options.root,
       tokens: rendered.tokens,
-      description: rendered.description,
+      description: data.description ?? rendered.description,
+      section: sectionOf(file, data.section, nav),
+      tags: data.tags,
       jsxImportSource: options.jsxImportSource,
       assets: { stylesheet: `${root}assets/site.css`, script: `${root}assets/page.js` },
       headings: rendered.headings,
