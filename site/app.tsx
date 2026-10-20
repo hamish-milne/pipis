@@ -11,13 +11,14 @@ import { repoHome, siteTitle } from 'virtual:docs/site';
 import type { PageModel } from '../docs-kit/pages.ts';
 import { Follow, MenuToggle, SearchButton, ThemeToggle } from './controls.tsx';
 import { Article, Navigation, Pager, Toc } from './docs.server.tsx';
+import { Footer, Landing } from './landing.server.tsx';
 
 /**
- * The page. `root` is the way from it to the site's root. `page` is what the server has of it (its Markdown, its place in the navigation), and the
- * browser does not: the parts that need it are the server's.
+ * The page. `root` is the way from it to the site's root, and `home` is whether it is the home page, which is not documentation but what comes before it.
+ * `page` is what the server has of it (its Markdown, its place in the navigation), and the browser does not: the parts that need it are the server's.
  */
-export function Page(props: { root: string; page?: PageModel }): JSXElement {
-  const { root, page } = props;
+export function Page(props: { root: string; home: boolean; page?: PageModel }): JSXElement {
+  const { root, home, page } = props;
   const single = __DOCS_PAGES__ === 'single';
   return (
     <>
@@ -34,24 +35,35 @@ export function Page(props: { root: string; page?: PageModel }): JSXElement {
           Source
         </a>
       </header>
-      <nav className="side" ariaLabel="Documentation">
-        <Navigation page={page} />
-        {single && <Island name="follow" component={Follow} props={{ kind: 'nav' }} />}
-      </nav>
-      <main>
-        <Article page={page} />
-        {!single && (
-          <nav className="pager" ariaLabel="Pages">
-            <Pager page={page} />
+      {home ? (
+        <main className="home">
+          <Landing page={page} />
+        </main>
+      ) : (
+        <>
+          <nav className="side" ariaLabel="Documentation">
+            <Navigation page={page} />
+            {single && <Island name="follow" component={Follow} props={{ kind: 'nav' }} />}
           </nav>
-        )}
-      </main>
-      {!single && (
-        <aside className="toc" ariaLabel="On this page">
-          <Toc page={page} />
-          <Island name="follow" component={Follow} props={{ kind: 'toc' }} />
-        </aside>
+          <main>
+            <Article page={page} />
+            {!single && (
+              <nav className="pager" ariaLabel="Pages">
+                <Pager page={page} />
+              </nav>
+            )}
+          </main>
+          {!single && (
+            <aside className="toc" ariaLabel="On this page">
+              <Toc page={page} />
+              <Island name="follow" component={Follow} props={{ kind: 'toc' }} />
+            </aside>
+          )}
+        </>
       )}
+      <footer className="site-footer">
+        <Footer page={page} />
+      </footer>
     </>
   );
 }

@@ -87,6 +87,35 @@ describe('the built site', () => {
     expect(css).toContain('@view-transition');
   });
 
+  it('has a home page that is the front door, with the sizes that were measured, and a foot on every page', () => {
+    const page = (name: string) => readFileSync(join(out, name), 'utf8');
+    const home = page('index.html');
+    // The home page is not documentation: it has no navigation, and says what the thing is, with numbers that are the ones the size check holds.
+    expect(home).toContain('<div id="app" class="shell" data-root="./" data-pages="separate" data-home="">');
+    expect(home).not.toContain('aria-label="Documentation"');
+    expect(home).toMatch(/<h1>(?:<!--t-->)?Components that run once\./);
+    const gzip: Record<string, number> = JSON.parse(readFileSync(join(root, 'tools/size-baseline.json'), 'utf8')).gzip;
+    const kb = (name: string) => `${((gzip[name] ?? 0) / 1000).toFixed(1)} KB`;
+    for (const name of ['A static element (core only)', 'The counter app', 'Everything: every export, in one program']) {
+      // (A text that is made of two has a marker between them, for a browser that hydrates the page.)
+      expect(home.replace(/<!--t-->/g, ''), name).toContain(kb(name));
+    }
+    // What does something on it is an island, as in the documentation: the example that runs, and the command to install.
+    for (const island of ['example', 'code']) expect(home, island).toContain(`data-island="${island}"`);
+    expect(home).toContain('assets/frame.html#a-first-component');
+    // What the search reads of it is its own text, as for every page.
+    expect(home).toContain('data-pagefind-body=""');
+    // The foot says where the code is and who makes it, on every page of the site, and the documentation's pages are not the home page.
+    for (const name of pages) {
+      const html = page(name);
+      expect(html, name).toContain('<footer class="site-footer">');
+      expect(html, name).toMatch(/Neofox Solutions LLP/);
+      expect(html, name).toContain('/issues">');
+      expect(html, name).toMatch(/blob\/main\/LICENSE">(?:<!--t-->)?MIT license</);
+      if (name !== 'index.html') expect(html, name).not.toContain('data-home');
+    }
+  });
+
   it('links only by relative paths, so that it works under any path of any host', () => {
     for (const page of pages) {
       const html = readFileSync(join(out, page), 'utf8');
@@ -515,6 +544,34 @@ describe('in a browser', () => {
       expect(await copy.getAttribute('data-copied')).not.toBeNull();
       expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('npm install pipis');
       await expect.poll(() => copy.getAttribute('data-copied'), { timeout: 5000 }).toBeNull();
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
+  it('opens the home page: hydrated, with the example running and editable, and the foot after it', async () => {
+    const { page, errors } = await open('index.html');
+    try {
+      await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false, undefined, {
+        timeout: 30_000,
+      });
+      await showExamples(page);
+      const frame = page.frames().find((f) => f.url().includes('frame.html#a-first-component'));
+      await expect.poll(() => frame?.locator('button').first().textContent(), { timeout: 15_000 }).toBe('Clicked 0 times');
+      await frame?.locator('button').first().click();
+      await expect.poll(() => frame?.locator('button').first().textContent()).toBe('Clicked 1 times');
+      // The links of the hero go to the documentation and to the code.
+      expect(await page.locator('.hero a.button.primary').getAttribute('href')).toBe('start/getting-started.html');
+      expect(await page.locator('.hero a.button:not(.primary)').getAttribute('href')).toMatch(/^https:\/\/github\.com\/.+\/pipis$/);
+      expect(await page.locator('.side').count(), 'the front door has no navigation').toBe(0);
+      expect(await page.locator('.site-footer').isVisible()).toBe(true);
+      // The install command is copied as the code of a block is.
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+      const copy = page.locator('.hero .code .copy');
+      await copy.click();
+      await expect.poll(() => copy.textContent()).toBe('Copied');
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('npm install pipis');
+      expect(errors).toEqual([]);
     } finally {
       await page.close();
     }

@@ -8,7 +8,7 @@ const SERVER_ONLY = ['**/node_modules/**', '**/*.server.test.*', '**/*.hydrate.t
 
 export default defineConfig({
   // The documentation site: `vp dev` serves it (and reloads on a change), `vp build` writes it into dist/ (site/vite-plugin.ts).
-  plugins: [docsSite({ render: 'islands', pages: 'single' })],
+  plugins: [docsSite({ render: 'islands', pages: 'separate' })],
   test: {
     // Each project says what it runs: an `include` here would be merged into both.
     // A fresh process per file, so a test that leaves a subscriber or a DOM node behind cannot colour the next one.

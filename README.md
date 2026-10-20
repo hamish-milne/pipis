@@ -17,7 +17,7 @@ Counter()(document.body);
 ## Why?
 
 - **Only what changed updates.** There is no diffing and no memoization to think about. Only the DOM nodes bound to changed state are touched.
-- **Tiny.** The core is about 0.8 KB gzipped, a counter app about 1.1 KB, and every export together about 2.4 KB. Each feature costs only what you import. These numbers are measured and held by a check in CI.
+- **Tiny.** The core is about 0.9 KB gzipped, a counter app about 1.2 KB, and every export together about 2.5 KB. Each feature costs only what you import. These numbers are measured and held by a check in CI.
 - **No hooks, no re-renders.** No dependency arrays, no stale closures, no rules of hooks.
 - **Just functions.** An element is a function: call it with a parent node to mount, with nothing to unmount.
 - **Server rendering.** The same components render to HTML on a server or at build time, with no DOM and nothing for the browser's bundle to carry.

@@ -19,7 +19,7 @@ export default function Counter() {
 ## Why?
 
 - **Only what changed updates.** There is no diffing and no memoization to think about. A reactive value bound to a text node costs about as much to write as the text node does directly (150 ns against 119 ns in the benchmark), and changing one field of one row of a 10,000-row `ReactiveList` takes 1.3 ms ([ADR 4](../adr/0004-list-rows.md)).
-- **Tiny.** The core (`createElement` and text nodes) is about 0.8 KB gzipped. A counter app with reactive state is about 1.1 KB, and importing every export is about 2.4 KB. Each feature costs only what you import (`If` +0.14 KB, `List` +0.33 KB, `Suspense` +0.37 KB). These are measured by `node tools/size.ts` and held by a CI check ([ADR 15](../adr/0015-size.md)). Your app's code is the bundle.
+- **Tiny.** The core (`createElement` and text nodes) is about 0.9 KB gzipped. A counter app with reactive state is about 1.2 KB, and importing every export is about 2.5 KB. Each feature costs only what you import (`If` +0.14 KB, `List` +0.33 KB, `Suspense` +0.37 KB). These are measured by `node tools/size.ts` and held by a CI check ([ADR 15](../adr/0015-size.md)). Your app's code is the bundle.
 - **No hooks, no re-renders.** A component runs once and returns an element. There are no dependency arrays, no stale closures, and no rules of hooks.
 - **Just functions.** An element is a function that inserts its content into the DOM: call it with a parent node to mount, call it with nothing to unmount. Stack traces look normal, and nothing is hidden from you.
 - **Bring your own state.** Use the built-in `reactive`, or use a Zustand or Redux store, an RxJS Observable, a signal or any other state with `adapt` ([the cookbook](../guide/cookbook.md)).

@@ -11,6 +11,8 @@ import { Page } from './app.tsx';
 
 export function Document(props: { page: PageModel; assets: Assets }): JSXElement {
   const { page, assets } = props;
+  // The index of a site of separate pages is its front door. (On a single page the documentation is the whole of it.)
+  const home = __DOCS_PAGES__ === 'separate' && page.url === 'index.html';
   return (
     <html lang="en">
       <head>
@@ -27,8 +29,8 @@ export function Document(props: { page: PageModel; assets: Assets }): JSXElement
         ))}
       </head>
       <body>
-        <div id="app" className="shell" data-root={page.root} data-pages={__DOCS_PAGES__}>
-          <Page root={page.root} page={page} />
+        <div id="app" className="shell" data-root={page.root} data-pages={__DOCS_PAGES__} data-home={home ? '' : undefined}>
+          <Page root={page.root} home={home} page={page} />
         </div>
         <script type="module" src={assets.script} />
       </body>
