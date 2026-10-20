@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { Fragment, createElement, createMarker, emptyElement, moveNode, setRef, textNode, type JSXElement } from './core.ts';
+import { Fragment, createElement, createMarker, emptyElement, moveNode, setRef, textNode, type JSXElement } from './index.ts';
 import { reactive } from './reactive.ts';
-import { h, html, mount, tracked } from '../test/dom.ts';
+import { h, html, mount, realBrowser, tracked } from '../test/dom.ts';
 
 const HTML_NS = 'http://www.w3.org/1999/xhtml';
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -430,6 +430,98 @@ describe('createElement', () => {
     it('sets a dashed key as written', () => {
       const { root } = mount(h('div', { 'data-multi-word': 'x' }));
       expect(root.firstElementChild?.getAttribute('data-multi-word')).toBe('x');
+    });
+  });
+
+  describe('a prop that is given nothing', () => {
+    // Assigned as it is, the DOM would write the text 'undefined' or 'null' for most properties: nothing is no attribute, as it is for data-*.
+    function made(props: Record<string, unknown>, tag = 'div') {
+      return mount(h(tag, props)).root.firstElementChild;
+    }
+
+    it('leaves no attribute for null or undefined, and not the text of them', () => {
+      for (const nothing of [undefined, null]) {
+        const node = made({ title: nothing, id: nothing, className: nothing, lang: nothing, 'aria-label': nothing });
+        expect(node?.attributes.length, `${String(nothing)}: ${node?.outerHTML}`).toBe(0);
+      }
+    });
+
+    it('takes the attribute off, as nothing and not as an empty one: a link without a href is not a link', () => {
+      const href = reactive<string | undefined>('/a');
+      const { root } = mount(h('a', { href, tabIndex: reactive<number | undefined>(3) }));
+      const link = root.firstElementChild;
+      expect(link?.getAttribute('href')).toBe('/a');
+      expect(link?.getAttribute('tabindex')).toBe('3');
+      href.value = undefined;
+      expect(link?.hasAttribute('href')).toBe(false);
+    });
+
+    it('lets a number go back to its default, and a form control to empty', () => {
+      const tabIndex = reactive<number | undefined>(5);
+      const value = reactive<string | undefined>('typed');
+      const { root } = mount(h('div', {}, h('button', { tabIndex }), h('input', { value })));
+      const [button, input] = [root.querySelector('button'), root.querySelector('input')];
+      tabIndex.value = undefined;
+      value.value = undefined;
+      expect(button?.hasAttribute('tabindex')).toBe(false);
+      expect(button?.tabIndex, 'the default, not 0 made by an empty string').toBe(0);
+      expect(input?.value).toBe('');
+      expect(input?.hasAttribute('value')).toBe(false);
+    });
+
+    it('clears an event handler and a style property', () => {
+      const click = reactive<(() => void) | undefined>(() => {});
+      const color = reactive<string | undefined>('red');
+      const { root } = mount(h('div', { onclick: click, style: { color } }));
+      const node = root.firstElementChild as HTMLElement;
+      expect(node.onclick).not.toBeNull();
+      expect(node.style.color).toBe('red');
+      click.value = undefined;
+      color.value = undefined;
+      expect(node.onclick).toBeNull();
+      expect(node.style.color).toBe('');
+    });
+
+    it('names the attribute of className and htmlFor, which are not their names in lowercase', () => {
+      const { root } = mount(h('label', { className: 'a', htmlFor: 'b' }));
+      const label = root.firstElementChild;
+      expect([label?.getAttribute('class'), label?.getAttribute('for')]).toEqual(['a', 'b']);
+      const gone = mount(h('label', { className: undefined, htmlFor: null })).root.firstElementChild;
+      expect(gone?.attributes.length).toBe(0);
+    });
+
+    it('keeps false where the DOM has it as a value: draggable and spellcheck are the text "false"', () => {
+      const node = made({ draggable: false, spellcheck: false });
+      expect(node?.getAttribute('draggable')).toBe('false');
+      // jsdom has no `spellcheck` property, so there it is only a property that was set.
+      if (realBrowser) expect(node?.getAttribute('spellcheck')).toBe('false');
+    });
+  });
+
+  describe('aria-* props', () => {
+    // The DOM's own properties for these are camelCase (`ariaLabel`); the dashed name, as written in HTML, is set as the attribute it is.
+    it('are attributes, set as written and taken off for null, undefined and false', () => {
+      const { root } = mount(h('div', { 'aria-label': 'Close', 'aria-hidden': false, 'aria-busy': null, 'aria-live': 'polite' }));
+      const node = root.firstElementChild;
+      expect(node?.getAttribute('aria-label')).toBe('Close');
+      expect(node?.getAttribute('aria-live')).toBe('polite');
+      expect(node?.hasAttribute('aria-hidden')).toBe(false);
+      expect(node?.hasAttribute('aria-busy')).toBe(false);
+    });
+
+    it('follow a reactive value', () => {
+      const expanded = reactive<string | false>('true');
+      const { root } = mount(h('button', { 'aria-expanded': expanded }));
+      const node = root.firstElementChild;
+      expect(node?.getAttribute('aria-expanded')).toBe('true');
+      expanded.value = false;
+      expect(node?.hasAttribute('aria-expanded')).toBe(false);
+    });
+
+    it('are not taken for other props that start the same way', () => {
+      const { root } = mount(h('div', { ariaLabel: 'Property', datasetish: 'x' }));
+      expect(root.firstElementChild?.getAttribute('aria-label')).toBe('Property');
+      expect(root.firstElementChild?.hasAttribute('datasetish')).toBe(false);
     });
   });
 

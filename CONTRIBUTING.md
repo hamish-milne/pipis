@@ -45,13 +45,18 @@ When a rule does not cover a case, decide by these.
 ## The repository
 
 ```text
-src/pipis/      the library: core.ts, reactive.ts, dynamic.ts, svg.ts, and the jsx-runtime entry points, with a *.test.ts beside each
+src/pipis/      the library: base.ts, core.ts, reactive.ts, dynamic.ts, svg.ts, and the jsx-runtime entry points, with a *.test.ts beside each.
+                index.ts is the barrel (`export *` of base, core, reactive and dynamic, and the platform's three public names): a module imports
+                what it needs from the module that has it, not through core. What is the library's own and not an app's is in internal.ts
+                What the nodes are made with is a platform, chosen by the bundler (ADR 19): platform.client.ts (the document's, the default) and
+                platform.server.ts (plain objects that are read as HTML), each exporting what platform.ts says; server.ts is `pipis/server`.
+                A test of server rendering is named *.server.test.ts and runs in its own project, with `pipis` as the server's build
 src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 docs/           the documentation, in Markdown: start/, guide/, reference/ (generated) and adr/ (the design decisions)
 src/samples/    the demo apps, which the site shows (`demo-app.html` is the page they are built into)
-docs-kit/       the documentation site's engine: Markdown to pages, the live examples and their editor, the search. It knows nothing of pipis
-site/           this site, on the kit: the layout (written in pipis), the style sheet, the adapter that mounts an example, the build and the test
+docs-kit/       the documentation site's engine: Markdown read into tokens, pages and navigation, the live examples' frames and editor, the search. It knows nothing of pipis
+site/           this site, a pipis app on the kit: the document and layout, the Markdown component and the renderer for the docs, the style sheet, the adapter that mounts an example, the build and the tests
 tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark,
                 the import-layer check, and the packer and its test)
 docs/adr/      the design assumptions, one record each, with the tests and measurements that could disprove them

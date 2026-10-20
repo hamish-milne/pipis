@@ -32,7 +32,8 @@ const listing = () =>
   );
 const read = (path: string) => tar('-xzOf', `package/${path}`);
 
-const APP = `import { Dynamic, ErrorBoundary, If, List, OneOf, ReactiveList, Suspense, adapt, patch, reactive, select, type JSXElement } from 'pipis';
+const APP = `import { Dynamic, ErrorBoundary, IS_CLIENT, If, List, OneOf, ReactiveList, Suspense, adapt, patch, reactive, select, type JSXElement } from 'pipis';
+import { renderToString, serializeData, type RenderResult } from 'pipis/server';
 
 type Product = { id: number; name: string; quantity: number };
 
@@ -78,6 +79,8 @@ export function Shop() {
 
 export const root: JSXElement = <Shop />;
 export const mounted: JSXElement = Counter();
+export const rendered: RenderResult = renderToString(<Shop />);
+export const data: string = serializeData({ client: IS_CLIENT });
 `;
 
 // Each line is a mistake that must be rejected: if pipis's types came out as `any`, none of them would be.
@@ -113,6 +116,32 @@ console.log(JSON.stringify({
   button: document.body.querySelector('button').namespaceURI,
   circle: document.body.querySelector('circle').namespaceURI,
 }));
+`;
+
+// Built as a server is: `--conditions=pipis-server` is what a bundler is given as `conditions`, so `pipis` is the server's platform.
+const SERVER = `import { IS_CLIENT, reactive, select, If, Helmet } from 'pipis';
+import { jsx } from 'pipis/jsx-runtime';
+import { renderToString, serializeData } from 'pipis/server';
+const n = reactive(2);
+const page = jsx('main', { className: 'a', children: [
+  jsx('h1', { children: ['n is ', select(n, (v) => v * 2)] }),
+  If({ condition: select(n, (v) => v > 1), children: jsx('p', { children: 'big & <bold>' }) }),
+  Helmet({ children: jsx('title', { children: 'T' }) }),
+] });
+const out = renderToString(page);
+console.log(JSON.stringify({ client: IS_CLIENT, html: out.html, head: out.head, data: serializeData({ a: '</script>' }), document: typeof document }));
+`;
+
+// Run as it is by default: no condition, no DOM. The server entry point must say what is wrong, not fail somewhere inside.
+const NO_CONDITION = `import { IS_CLIENT } from 'pipis';
+import { renderToString } from 'pipis/server';
+let message = '';
+try {
+  renderToString(() => null);
+} catch (error) {
+  message = error.message;
+}
+console.log(JSON.stringify({ client: IS_CLIENT, message }));
 `;
 
 beforeAll(() => {
@@ -152,6 +181,8 @@ beforeAll(() => {
     JSON.stringify({ compilerOptions: { ...compilerOptions, module: 'esnext', moduleResolution: 'bundler' }, include: ['src/bad.tsx'] }),
   );
   writeFileSync(join(project, 'smoke.mjs'), SMOKE);
+  writeFileSync(join(project, 'server.mjs'), SERVER);
+  writeFileSync(join(project, 'no-condition.mjs'), NO_CONDITION);
   execSync(`npm install "${tarball}" --no-audit --no-fund --offline --loglevel=error`, { cwd: project });
 }, 240_000);
 
@@ -189,9 +220,21 @@ describe('the tarball', () => {
     for (const file of ['LICENSE', 'README.md', 'LLM.md']) expect(files.has(file), file).toBe(true);
   });
 
+  it('chooses the platform through an import of its own, the browser build unless the bundler says server', () => {
+    const manifest = JSON.parse(read('package.json'));
+    const files = listing();
+    expect(Object.keys(manifest.imports)).toEqual(['#platform']);
+    expect(Object.keys(manifest.imports['#platform'])).toEqual(['pipis-server', 'default']);
+    expect(manifest.imports['#platform'].default.default).toBe('./dist/platform.client.js');
+    expect(manifest.imports['#platform']['pipis-server'].default).toBe('./dist/platform.server.js');
+    for (const choice of Object.values<{ types: string; default: string }>(manifest.imports['#platform'])) {
+      for (const target of [choice.types, choice.default]) expect(files.has(target.replace(/^\.\//, '')), target).toBe(true);
+    }
+  });
+
   it('holds the library and nothing else: no source, tests, site helpers or tooling', () => {
     const files = [...listing()].sort();
-    expect(files.filter((f) => !/^(dist\/[\w-]+\.(js|d\.ts)|LICENSE|README\.md|LLM\.md|package\.json)$/.test(f))).toEqual([]);
+    expect(files.filter((f) => !/^(dist\/[\w.-]+\.(js|d\.ts)|LICENSE|README\.md|LLM\.md|package\.json)$/.test(f))).toEqual([]);
     expect(files.filter((f) => /markdown|highlight|\.test\.|\.tsx?$/.test(f) && !f.endsWith('.d.ts'))).toEqual([]);
     expect(files.filter((f) => f.endsWith('.js')).sort()).toEqual(['index', ...Object.keys(LIBRARY)].map((m) => `dist/${m}.js`).sort());
   });
@@ -255,5 +298,27 @@ describe('a clean project that installed it', () => {
       expect.arrayContaining(['If', 'List', 'ReactiveList', 'adapt', 'createElement', 'patch', 'reactive', 'select']),
     );
     expect(out.runtime).toEqual(['Fragment', 'jsx', 'jsxs']);
+  });
+
+  it('renders on a server, with no DOM, when the bundler says the platform is the server', () => {
+    const run = spawnSync(process.execPath, ['--conditions=pipis-server', 'server.mjs'], { cwd: project, encoding: 'utf8' });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+    expect(JSON.parse(run.stdout)).toEqual({
+      client: false,
+      html: '<main class="a"><h1>n is 4</h1><!----><p>big &amp; &lt;bold&gt;</p></main>',
+      head: '<title>T</title>',
+      data: '{"a":"\\u003c/script\\u003e"}',
+      document: 'undefined',
+    });
+  });
+
+  it('is the browser by default, and the server entry point says what to do about it', () => {
+    const run = spawnSync(process.execPath, ['no-condition.mjs'], { cwd: project, encoding: 'utf8' });
+    expect(run.stderr).toBe('');
+    expect(run.status).toBe(0);
+    const out = JSON.parse(run.stdout);
+    expect(out.client).toBe(true);
+    expect(out.message).toContain("'pipis-server' condition");
   });
 });

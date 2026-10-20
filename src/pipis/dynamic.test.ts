@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { Fragment, moveNode, textNode, type JSXElement, type Reactive } from './core.ts';
+import { Fragment, moveNode, textNode, type JSXElement, type Reactive } from './index.ts';
 import { reactive, select, withErrorHandler, type ReactiveState } from './reactive.ts';
 import {
   Dynamic,

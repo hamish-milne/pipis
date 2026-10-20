@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vite-plus/test';
-import { REACTIVE, isReactive, subscribe } from './core.ts';
+import { REACTIVE, isReactive, subscribe } from './base.ts';
 import { constant, defineContext, handleError, patch, reactive, select, subscribeWithCatch, withErrorHandler } from './reactive.ts';
 import { quiet, tracked } from '../test/dom.ts';
 

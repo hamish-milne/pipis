@@ -8,60 +8,60 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildSite, type PageModel, type SiteOptions } from '../docs-kit/build.ts';
-import { highlight, escapeHtml } from '../docs-kit/code.ts';
 import { bundle } from '../tools/bundle.ts';
 import { LIBRARY } from '../tools/deps.ts';
 import { stripToJs } from '../tools/strip-types.ts';
 import { repoFiles, repoHome, siteTitle } from './config.ts';
-import { installDom, toHtml } from './dom.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = (name: string) => join(root, 'src/pipis', name);
 
-/** The layout, which is JSX over pipis: bundled, because Node does not read JSX, and run in a DOM. */
+/**
+ * The layout, which is JSX over pipis: bundled, because Node does not read JSX, and built as an app's server is, with pipis as the
+ * server's platform (the `pipis-server` condition), so that a page is rendered to a string with no DOM at all.
+ */
 async function loadLayout(): Promise<(page: PageModel) => string> {
   const code = await bundle({
-    contents: `export { Page } from 'layout';`,
+    contents: `import { renderToString } from 'pipis/server'; import { Document } from 'layout'; export const render = (page) => renderToString(Document({ page })).html;`,
     alias: {
-      layout: join(root, 'site/layout.tsx'),
+      layout: join(root, 'site/document.tsx'),
       pipis: src('index.ts'),
+      'pipis/server': src('server.ts'),
       'pipis/jsx-runtime': src('jsx-runtime.ts'),
       'pipis/jsx-dev-runtime': src('jsx-dev-runtime.ts'),
     },
     jsxImportSource: 'pipis',
     platform: 'node',
+    conditions: ['pipis-server'],
   });
   const file = join(root, 'out', 'site-layout.mjs');
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, code);
-  installDom();
-  const { Page }: { Page: (props: { page: PageModel }) => (parent?: Node) => unknown } = await import(pathToFileURL(file).href);
-  return (page) => toHtml(Page({ page }));
+  const { render }: { render: (page: PageModel) => string } = await import(pathToFileURL(file).href);
+  return render;
 }
 
-/** The library as the examples import it: the package's own modules, as `pipis` ships them. */
+/**
+ * The library as the examples import it, in a browser: the package's own modules, as `pipis` ships them, with the browser's platform
+ * (the package's `#platform` import is what the import map says it is). The server's modules are not in the browser's pages.
+ */
 function library(): SiteOptions['library'] {
   const files: Record<string, string> = {};
-  for (const module of ['index', ...Object.keys(LIBRARY)]) {
+  const server = new Set(['server', 'platform.server', 'reflect']);
+  for (const module of ['index', ...Object.keys(LIBRARY)].filter((m) => !server.has(m))) {
     files[`lib/${module}.js`] = stripToJs(readFileSync(src(`${module}.ts`), 'utf8'));
   }
   return {
     files,
-    imports: { pipis: 'lib/index.js', 'pipis/jsx-runtime': 'lib/jsx-runtime.js', 'pipis/jsx-dev-runtime': 'lib/jsx-dev-runtime.js' },
+    imports: {
+      pipis: 'lib/index.js',
+      'pipis/jsx-runtime': 'lib/jsx-runtime.js',
+      'pipis/jsx-dev-runtime': 'lib/jsx-dev-runtime.js',
+      '#platform': 'lib/platform.client.js',
+    },
   };
 }
 
-/** A demo: the app in a frame, and its source below it. */
-function demo(name: string, rootPath: string): string {
-  const file = join(root, 'src/samples', `${name}.tsx`);
-  const source = readFileSync(file, 'utf8');
-  return (
-    `<div class="demo" data-pagefind-ignore><iframe loading="lazy" title="${escapeHtml(name)} demo" src="${rootPath}demo-app.html#${name}"></iframe>` +
-    `<details><summary>Source: src/samples/${name}.tsx</summary><div class="code">${highlight(source, 'tsx')}</div></details></div>\n`
-  );
-}
-
-/** Writes the site's pages and scripts into `out`, which is emptied first unless `clean` is false (Vite has put the demos there). */
 export async function build(out = 'dist', clean = true) {
   const built = await buildSite({
     root,
@@ -73,9 +73,8 @@ export async function build(out = 'dist', clean = true) {
     jsxImportSource: 'pipis',
     library: library(),
     adapter: 'site/adapter.ts',
-    layout: await loadLayout(),
+    document: await loadLayout(),
     styles: ['site/site.css'],
-    directives: { demo: (name, ctx) => demo(name, ctx.root) },
     clean,
   });
   return built;

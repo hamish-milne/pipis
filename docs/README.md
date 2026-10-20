@@ -16,6 +16,7 @@ A small front-end framework for JSX: no virtual DOM, no re-rendering, and a comp
 - [Patterns and pitfalls](guide/patterns-and-pitfalls.md): the details that are easy to get wrong.
 - [Custom elements](guide/custom-elements.md): writing your own element, and the head it returns.
 - [Lifecycle](guide/lifecycle.md): construct, mount, update, move and unmount.
+- [Server rendering](guide/server-rendering.md): HTML on a server or at build time, from the same components.
 - [Caveats and non-goals](guide/non-goals.md): what it does not do.
 - [Cookbook](guide/cookbook.md): using it with other state libraries, and with libraries that draw.
 

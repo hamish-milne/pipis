@@ -13,7 +13,9 @@
  *
  * Imports are from "pipis" itself, as in LLM.md, which also checks that the package's `exports` resolve.
  */
+import { renderToString, serializeData } from 'pipis/server';
 import {
+  IS_CLIENT,
   Dynamic,
   Effect,
   ErrorBoundary,
@@ -599,4 +601,13 @@ export function apiReferenceExamples() {
       <Risky />
     </ErrorBoundary>,
   ];
+}
+
+/** The server rendering section of LLM.md. */
+export function serverRenderingExamples() {
+  const App = () => <p>hello</p>;
+  // WRONG in LLM.md: `localStorage` on a server. RIGHT: guarded by a constant.
+  const theme = reactive(IS_CLIENT ? (localStorage.getItem('theme') ?? 'light') : 'light');
+  const { html, head } = renderToString(<App />);
+  return [theme, html, head, serializeData({ a: 1 })];
 }

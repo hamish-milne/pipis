@@ -1,5 +1,5 @@
 import { jsx, type Component } from './jsx-runtime.ts';
-import type { ChildrenProp } from './core.ts';
+import type { ChildrenProp } from './base.ts';
 export { Fragment } from './core.ts';
 
 /** Where a JSX element is in the source, which the compiler passes to {@link jsxDEV} in development. pipis does not use it. */

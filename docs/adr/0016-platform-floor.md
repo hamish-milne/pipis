@@ -18,7 +18,7 @@ step, and the package is deliberately the source with its types blanked out (ADR
   newer global (`structuredClone` is Baseline 2022, `Reflect` is 2016). The library has no `env` set for the linter, so a global the
   language does not declare is reported and not assumed.
 - The same rule reports newer syntax it recognises (`async` functions, `**`), unless the feature is in the `ignoreFeatures` list in
-  `vite.config.ts`. That list is the syntax the library is written in (`let` and `const`, classes, destructuring, spread, `??`, `??=`;
+  `vite.config.ts`. That list is the syntax the library is written in (`let` and `const`, template literals, classes, destructuring, spread, `??`, `??=`;
   Baseline dates several of them later than ES2015 because of early engine bugs), so using a new kind of syntax is a decision. The rule
   does not recognise every syntax feature (`?.` is not reported), so the list records intent and is not a complete guard.
 

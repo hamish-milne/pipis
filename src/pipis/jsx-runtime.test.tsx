@@ -4,7 +4,8 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { Fragment as RuntimeFragment, jsx, jsxs } from './jsx-runtime.ts';
 import { Fragment as DevFragment, jsxDEV } from './jsx-dev-runtime.ts';
-import { Fragment, type ChildrenProp, type JSXElement } from './core.ts';
+import { Fragment } from './core.ts';
+import type { ChildrenProp, JSXElement } from './base.ts';
 import { reactive, select } from './reactive.ts';
 import { If, List } from './dynamic.ts';
 import { html, mount } from '../test/dom.ts';

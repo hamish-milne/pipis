@@ -8,7 +8,7 @@ import { signal } from '@preact/signals-core';
 import { assign, createActor, createMachine } from 'xstate';
 import { proxy, snapshot, subscribe as valtioSubscribe } from 'valtio/vanilla';
 import { atom as jotaiAtom, createStore as createJotaiStore } from 'jotai/vanilla';
-import { isReactive, type Reactive } from './core.ts';
+import { isReactive, type Reactive } from './base.ts';
 import { adapt, select } from './reactive.ts';
 import { h, mount } from '../test/dom.ts';
 

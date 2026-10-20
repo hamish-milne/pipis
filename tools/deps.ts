@@ -9,26 +9,40 @@ import { fileURLToPath } from 'node:url';
 const dir = join(dirname(fileURLToPath(import.meta.url)), '../src/pipis');
 
 /**
- * The library's modules and what each may import at run time. Each is a layer an app opts into by importing it: `core` is what every
- * app pays for, `reactive` adds state, `dynamic` adds the structural elements, and the JSX runtime is separate so that an app that
- * writes JSX over core alone does not pull in `reactive`. A module that needs another has to say so here, on purpose.
+ * The library's modules and what each may import at run time. Each is a layer an app opts into by importing it: `base` is what every
+ * app pulls in, `core` builds elements on it, `reactive` adds state, `dynamic` adds the structural elements, and the JSX runtime is
+ * separate so that an app that writes JSX over core alone does not pull in `reactive`. A module that needs another has to say so here,
+ * on purpose.
+ *
+ * `#platform` is what the nodes are made with: the browser's `platform.client`, or `platform.server` when the bundler is told it is a
+ * server (see docs/adr/0019-server-rendering.md). It is an import of the package itself, so it is named here as it is written. Nothing
+ * but `core`, `dynamic` and `server` may use it, and the two platforms may not use each other, so that neither is in the other's bundle.
  */
 export const LIBRARY: Record<string, string[]> = {
-  core: [],
-  reactive: ['core'],
-  dynamic: ['core', 'reactive'],
+  base: [],
+  internal: [],
+  'platform.client': ['base', 'internal'],
+  'platform.server': ['base', 'internal', 'reflect'],
+  reflect: [],
+  core: ['base', '#platform'],
+  reactive: ['base'],
+  dynamic: ['base', 'core', 'reactive', '#platform'],
+  server: ['#platform', 'platform.server'],
   'jsx-runtime': ['core'],
   'jsx-dev-runtime': ['jsx-runtime', 'core'],
 };
 
+/** The one import of the package itself that the library makes: the platform, chosen by the bundler. */
+export const PLATFORM_IMPORT = '#platform';
+
 /** Modules with no runtime code: they are declarations, so they ship as `.d.ts` only. */
-export const TYPES_ONLY = ['svg'];
+export const TYPES_ONLY = ['svg', 'platform'];
 
 /** The package's entry module: it re-exports the library's modules, so it is left out of the graph. Which it re-exports is held by the test. */
 export const BARREL = 'index';
 
 /** The entry points of the package: what `exports` in package.json names, so what a user can import. */
-export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime'];
+export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime', 'server'];
 
 const moduleName = (file: string) => file.replace(/\.tsx?$/, '');
 
@@ -75,7 +89,7 @@ export function runtimeGraph(): Map<string, Set<string>> {
     const needs = new Set<string>();
     for (const { specifier, runtime } of importsOf(module)) {
       if (!runtime) continue;
-      const relative = /^\.\/([\w-]+)\.tsx?$/.exec(specifier);
+      const relative = /^\.\/([\w.-]+?)\.tsx?$/.exec(specifier);
       needs.add(relative?.[1] ?? specifier);
     }
     graph.set(module, needs);

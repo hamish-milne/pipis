@@ -25,11 +25,14 @@ export interface Declaration {
 
 /** Where each public module is imported from. The names a module re-exports from another are listed once, under the module that has them. */
 const ENTRY: Record<string, string> = {
+  base: 'pipis',
+  'platform.client': 'pipis',
   core: 'pipis',
   reactive: 'pipis',
   dynamic: 'pipis',
   'jsx-runtime': 'pipis/jsx-runtime',
   'jsx-dev-runtime': 'pipis/jsx-dev-runtime',
+  server: 'pipis/server',
 };
 
 /** How the reference is laid out. Hand-written because the order and the introductions are editorial; checked to cover every export. */
@@ -59,6 +62,8 @@ export const STRUCTURE: { title: string; about: string; names: string[] }[] = [
     about: 'What JSX makes, and the pieces for making your own.',
     names: [
       'JSXElement',
+      'JSXChild',
+      'JSXChildArray',
       'JSXParent',
       'JSXSibling',
       'Content',
@@ -102,6 +107,12 @@ export const STRUCTURE: { title: string; about: string; names: string[] }[] = [
     title: 'Portals and the document head',
     about: 'Rendering somewhere else in the document.',
     names: ['PortalTargetValue', 'PortalTarget', 'Portal', 'Helmet'],
+  },
+  {
+    title: 'Platform and server rendering',
+    about:
+      'What `pipis` runs on. By default it is a browser; a bundler can be told it is a server (the `pipis-server` condition), and then an element can be rendered to HTML. See the [guide to server rendering](../guide/server-rendering.md).',
+    names: ['IS_CLIENT', 'renderToString', 'RenderResult', 'serializeData'],
   },
   {
     title: 'The JSX runtime',
@@ -170,7 +181,8 @@ export function parseDeclarations(text: string, from: string): Declaration[] {
         if ('({['.includes(ch)) depth++;
         else if (')}]'.includes(ch)) depth--;
       }
-      if (depth <= 0 && l.trimEnd().endsWith(';')) break;
+      // An interface or a class ends with a closing brace of its own, and a type or a function with a semicolon.
+      if (depth <= 0 && (l.trimEnd().endsWith(';') || l.trim() === '}')) break;
     }
     i = j;
     const code = statement.join('\n');

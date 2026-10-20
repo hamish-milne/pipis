@@ -20,6 +20,7 @@ Counter()(document.body);
 - **Tiny.** The core is about 0.8 KB gzipped, a counter app about 1.1 KB, and every export together about 2.4 KB. Each feature costs only what you import. These numbers are measured and held by a check in CI.
 - **No hooks, no re-renders.** No dependency arrays, no stale closures, no rules of hooks.
 - **Just functions.** An element is a function: call it with a parent node to mount, with nothing to unmount.
+- **Server rendering.** The same components render to HTML on a server or at build time, with no DOM and nothing for the browser's bundle to carry.
 - **Bring your own state.** Use the built-in `reactive`, or a Zustand or Redux store, an RxJS Observable, a signal or anything else, with `adapt`.
 
 ## Install
@@ -34,12 +35,12 @@ Tell TypeScript and your bundler to take JSX from pipis. In `tsconfig.json`:
 { "compilerOptions": { "jsx": "react-jsx", "jsxImportSource": "pipis" } }
 ```
 
-pipis needs a DOM and a browser with ES2015 built-ins. It ships its source as written, with ES2020 and ES2021 syntax, so an app that targets older browsers lowers `node_modules/pipis` with its bundler.
+pipis needs a browser with ES2015 built-ins (and, to render on a server, a bundler told to use the server's build: see the guide to server rendering). It ships its source as written, with ES2020 and ES2021 syntax, so an app that targets older browsers lowers `node_modules/pipis` with its bundler.
 
 ## Documentation
 
 - [Getting started](https://github.com/neofox-solutions/pipis/blob/main/docs/start/getting-started.md)
-- [The guide](https://github.com/neofox-solutions/pipis/blob/main/docs/README.md): reactive values, dynamic UI, utilities, and a comparison with React
+- [The guide](https://github.com/neofox-solutions/pipis/blob/main/docs/README.md): reactive values, dynamic UI, utilities, server rendering, and a comparison with React
 - [API reference](https://github.com/neofox-solutions/pipis/blob/main/docs/reference/api.md)
 - [Design decisions](https://github.com/neofox-solutions/pipis/blob/main/docs/adr/README.md), each with the tests and measurements that could show it wrong
 - [`LLM.md`](https://github.com/neofox-solutions/pipis/blob/main/LLM.md): a reference written for AI coding agents, which also ships in the package

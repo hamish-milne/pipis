@@ -56,5 +56,5 @@ Many state libraries, and tools such as [immer](https://immerjs.github.io/immer/
 - **Batching.** Updates are synchronous: each write updates the DOM before it returns. Combine related changes into one write ([ADR 6](../adr/0006-synchronous-unbatched-updates.md)).
 - **A `key` prop.** Identity in a list is the `itemKey` of `List` and `ReactiveList` ([ADR 5](../adr/0005-no-key-prop.md)).
 - **MathML.** The types accept MathML tags, but they are created as unknown HTML elements ([ADR 13](../adr/0013-namespaces.md)).
-- **Rendering without a DOM.** Elements are made with `document`, so there is no server-side rendering to a string.
+- **Adopting server-rendered markup.** A server renders to HTML ([Server rendering](server-rendering.md)), but the browser mounts its own copy over it: it does not take over the nodes the server wrote.
 - **A browser older than ES2015**, and a build step that lowers the library's newer syntax for you ([ADR 16](../adr/0016-platform-floor.md)).

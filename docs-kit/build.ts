@@ -7,11 +7,12 @@ import { dirname, join, posix, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rolldown } from 'rolldown';
 import * as pagefind from 'pagefind';
-import { markdownFiles, type DocBlock } from '../tools/docs.ts';
-import { escapeHtml } from './code.ts';
-import { render, relativeUrl, pageUrl, type Heading, type RenderContext } from './markdown.ts';
+import { markdownFiles } from '../tools/docs.ts';
+import { parsePage, relativeUrl, pageUrl, type Heading } from './markdown.ts';
 import { parseNav, type NavItem, type NavSection } from './nav.ts';
+import { THEME_SCRIPT } from './theme.ts';
 import { toJs } from './transform.ts';
+import type { Token } from 'marked';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -23,8 +24,16 @@ export interface PageModel {
   url: string;
   /** The way from this page to the site's root: `../`. */
   root: string;
-  /** The page's content. */
-  html: string;
+  /** The page's Markdown, read: what the site makes the content of the page from. */
+  tokens: Token[];
+  /** The repository's folder, for what a page shows that is not Markdown (the source of a demo). */
+  sourceRoot: string;
+  /** What the page is about, as text. */
+  description: string;
+  /** What JSX compiles to calls of: the examples' library. */
+  jsxImportSource: string;
+  /** Where the pages get their style and script from, as links from this page. */
+  assets: { stylesheet: string; script: string };
   headings: Heading[];
   nav: NavSection[];
   /** This page's place in the navigation, if it has one. */
@@ -56,11 +65,10 @@ export interface SiteOptions {
   library: { files: Record<string, string>; imports: Record<string, string> };
   /** A module with `mount(module, container): () => void`, which runs an example's default export in the frame. */
   adapter: string;
-  /** The layout of a page: its body as HTML. */
-  layout(page: PageModel): string;
+  /** A page, as the whole document: `<html>` and what is in it. The kit writes it after the doctype. */
+  document(page: PageModel): string;
   /** CSS beyond the kit's own, in order. */
   styles: string[];
-  directives?: RenderContext['directives'];
   /** Empty the output folder first (the default). Not when something else has written there, as Vite has the demos. */
   clean?: boolean;
 }
@@ -70,38 +78,9 @@ export interface Built {
   examples: string[];
 }
 
-const THEME_SCRIPT =
-  "<script>(function(){var t;try{t=localStorage.getItem('docs-theme')}catch(e){}" +
-  "if(t!=='light'&&t!=='dark')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';" +
-  'document.documentElement.dataset.theme=t})()</script>';
-
 function write(file: string, content: string) {
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, content);
-}
-
-/** The example as HTML: its frame, its code, and the places the page's script puts the buttons and a problem. */
-function figure(block: DocBlock, code: string, root: string): string {
-  const style = [`height:${block.height ?? 120}px`, block.width ? `max-width:${block.width}px` : ''].filter(Boolean).join(';');
-  const title = escapeHtml(block.title);
-  return (
-    `<figure class="example" id="example-${block.id}"${block.height === null ? '' : ` data-height="${block.height}"`}>` +
-    `<figcaption><span>${title}</span><span class="example-actions">` +
-    '<button type="button" data-action="edit" hidden>Edit</button><button type="button" data-action="reset" hidden>Reset</button></span></figcaption>' +
-    `<div class="example-preview" data-pagefind-ignore><iframe loading="lazy" title="${title}" src="${root}assets/frame.html#${block.id}" style="${style}"></iframe></div>` +
-    `<div class="example-code">${code}</div><p class="example-error" role="alert" hidden></p>` +
-    `<template data-pagefind-ignore>${escapeHtml(block.code)}</template></figure>\n`
-  );
-}
-
-function descriptionOf(html: string): string {
-  const p = /<p>([\s\S]*?)<\/p>/.exec(html)?.[1] ?? '';
-  return p
-    .replace(/<[^>]*>/g, '')
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 function css(options: SiteOptions): string {
@@ -150,7 +129,7 @@ function frame(options: SiteOptions): string {
   const resolved = Object.fromEntries(Object.entries(imports).map(([k, v]) => [k, v.startsWith('./') ? v : `./${v}`]));
   return (
     '<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-    `<title>Example</title>${THEME_SCRIPT}` +
+    `<title>Example</title><script>${THEME_SCRIPT}</script>` +
     `<script type="importmap">${JSON.stringify({ imports: resolved })}</script>` +
     '<link rel="stylesheet" href="frame.css"></head><body><div id="root"></div><script type="module" src="frame.js"></script></body></html>\n'
   );
@@ -172,13 +151,7 @@ export async function buildSite(options: SiteOptions): Promise<Built> {
     const file = relative(docs, path).replace(/\\/g, '/');
     const url = pageUrl(file);
     const root = posix.relative(posix.dirname(url), '.') === '' ? './' : `${posix.relative(posix.dirname(url), '.')}/`;
-    const rendered = render(readFileSync(path, 'utf8').replace(/\r\n/g, '\n'), {
-      file,
-      repoUrl: options.repoUrl,
-      root,
-      example: (block, code) => figure(block, code, root),
-      directives: options.directives ?? {},
-    });
+    const rendered = parsePage(readFileSync(path, 'utf8').replace(/\r\n/g, '\n'), { file, repoUrl: options.repoUrl });
     for (const block of rendered.examples) {
       write(join(assets, 'examples', `${block.id}.js`), toJs(block.code, options.jsxImportSource));
       examples.push(block.id);
@@ -190,7 +163,11 @@ export async function buildSite(options: SiteOptions): Promise<Built> {
       root,
       siteTitle: options.siteTitle,
       repoHome: options.repoHome,
-      html: rendered.html,
+      sourceRoot: options.root,
+      tokens: rendered.tokens,
+      description: rendered.description,
+      jsxImportSource: options.jsxImportSource,
+      assets: { stylesheet: `${root}assets/site.css`, script: `${root}assets/page.js` },
       headings: rendered.headings,
       nav,
       current: order[at],
@@ -198,16 +175,7 @@ export async function buildSite(options: SiteOptions): Promise<Built> {
       next: at >= 0 ? order[at + 1] : undefined,
       href: (target) => relativeUrl(url, target),
     };
-    const title = `${page.title} · ${options.siteTitle}`;
-    write(
-      join(out, url),
-      '<!doctype html>\n' +
-        `<html lang="en" data-root="${root}" data-jsx="${options.jsxImportSource}"><head><meta charset="utf-8">` +
-        '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-        `<title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(descriptionOf(rendered.html))}">` +
-        `${THEME_SCRIPT}<link rel="stylesheet" href="${root}assets/site.css"></head>` +
-        `<body>${options.layout(page)}<script type="module" src="${root}assets/page.js"></script></body></html>\n`,
-    );
+    write(join(out, url), '<!doctype html>\n' + options.document(page) + '\n');
     pages.push(url);
   }
 

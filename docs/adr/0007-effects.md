@@ -3,7 +3,7 @@
 **Decision.** `effect(fn)` runs `fn` when it is mounted and its returned cleanup when it is unmounted. An effect that returns no cleanup
 still counts as run, so it does not run again when the same element is mounted again at the same place (a `List` does that on every
 update). It is placed as the first child of its parent: children mount right to left, so the siblings after it are already attached
-when it runs.
+when it runs. On a server, where there is no screen for it to attach to, an effect is not run ([ADR 19](0019-server-rendering.md)).
 
 **Why.** Side effects (listeners, timers, animation loops) need a defined start and end that follow the element's life, not the
 component body, which runs once and has no end.

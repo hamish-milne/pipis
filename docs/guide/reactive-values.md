@@ -101,7 +101,7 @@ export default function Profile() {
 
 When you pass a reactive value as an attribute or child of an HTML or SVG element, pipis subscribes to it when the element is mounted, updates exactly that attribute or text node on each change, and unsubscribes when the element is unmounted. A reactive `Content` value (`string | number | false | null | undefined`) renders `false`, `null` and `undefined` as empty text, so `select(obj, 'optionalField')` is safe as a child.
 
-`data-*` attributes take a reactive boolean directly: true sets the attribute, and `null`, `undefined` or `false` removes it. `style` is an object with one entry per CSS property, each a string with units or a reactive string; the object itself is not reactive.
+`data-*` and `aria-*` attributes take a reactive value directly: a string or number sets the attribute, and `null`, `undefined` or `false` removes it (write the text `false` as the string `'false'`, as in `aria-expanded="false"`). `style` is an object with one entry per CSS property, each a string with units or a reactive string; the object itself is not reactive.
 
 ```tsx live title="Reactive attributes and styles"
 import { reactive, select } from 'pipis';

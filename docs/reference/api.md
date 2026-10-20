@@ -186,6 +186,22 @@ cheap, idempotent operation - see `moveNode`.
 type JSXElement = (parent?: JSXParent, sibling?: JSXSibling) => Node | null;
 ```
 
+### `JSXChild`
+
+What a child of an element can be: an element, text, or a reactive value that is text.
+
+```ts
+type JSXChild = JSXElement | Content | Reactive<Content>;
+```
+
+### `JSXChildArray`
+
+Children nested to any depth.
+
+```ts
+type JSXChildArray = readonly (JSXChild | JSXChildArray)[];
+```
+
 ### `JSXParent`
 
 The first argument of an element: the node to mount into, or `undefined` to unmount.
@@ -564,6 +580,59 @@ Renders its children into the document head.
 function Helmet(props: ChildrenProp): JSXElement;
 ```
 
+## Platform and server rendering
+
+What `pipis` runs on. By default it is a browser; a bundler can be told it is a server (the `pipis-server` condition), and then an element can be rendered to HTML. See the [guide to server rendering](../guide/server-rendering.md).
+
+### `IS_CLIENT`
+
+Whether the code runs in a browser. `true` here and `false` in the server's build, a constant either way, so what depends on it is removed from the build that cannot use it.
+
+```ts
+const IS_CLIENT: boolean;
+```
+
+### `renderToString`
+
+From `pipis/server`.
+
+Renders an element to HTML. It is synchronous: the element is mounted, its markup is read, and it is unmounted, so nothing is left
+subscribed, and a state change after it has no effect. Reactive values are shown as they are when it is mounted. `Effect`, `Watch`, `Portal`
+and `Suspense`'s promise do not run, and event handlers and `ref`s are not used: they are for a browser.
+
+It throws if `pipis` is the browser's build rather than the server's, which is the bundler's to choose: see the guide to server rendering.
+
+```ts
+function renderToString(element: JSXElement): RenderResult;
+```
+
+### `RenderResult`
+
+From `pipis/server`.
+
+The result of `renderToString`.
+
+```ts
+interface RenderResult {
+    /** The markup of the element. */
+    html: string;
+    /** What `Helmet` rendered, as markup for the document's `<head>`. */
+    head: string;
+}
+```
+
+### `serializeData`
+
+From `pipis/server`.
+
+Data for the browser to read, as text to put inside `<script type="application/json">`. It is JSON with `<`, `>`, `&` and the two line
+separators written as escapes, so that the data cannot end the script or begin another tag. A value JSON cannot hold (`undefined`, a function)
+is `null`.
+
+```ts
+function serializeData(value: unknown): string;
+```
+
 ## The JSX runtime
 
 Imported by the compiler when `jsxImportSource` is `pipis`, from `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`. An app never writes these.
@@ -615,7 +684,7 @@ From `pipis/jsx-dev-runtime`.
 What the compiler calls for a JSX element in development: `jsx`, ignoring the extra arguments the compiler passes.
 
 ```ts
-const jsxDEV: (type: Component, props: ChildrenProp, ..._unused: unknown[]) => import("./core.ts").JSXElement;
+const jsxDEV: (type: Component, props: ChildrenProp, ..._unused: unknown[]) => import("./base.ts").JSXElement;
 ```
 
 ### `SourceInfo`

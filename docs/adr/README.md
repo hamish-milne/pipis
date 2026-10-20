@@ -27,3 +27,4 @@ compare ratios, not the absolute figures.
 | [16](0016-platform-floor.md)               | The platform floor is Baseline 2021                                         |
 | [17](0017-package-shape.md)                | The package ships its own source, with the types blanked out                |
 | [18](0018-casts-and-any.md)                | Casts and `any` in the library are owned in writing                         |
+| [19](0019-server-rendering.md)             | The server is another build of `pipis`, chosen by the bundler               |

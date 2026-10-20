@@ -1,5 +1,6 @@
 import { adapt, reactive, withErrorHandler, type ReactiveState } from '../pipis/reactive.ts';
-import { createElement, type JSXElement, type Reactive } from '../pipis/core.ts';
+import { createElement } from '../pipis/core.ts';
+import type { JSXElement, Reactive } from '../pipis/base.ts';
 
 /** True when the tests are running in a real browser rather than jsdom. */
 export const realBrowser = typeof navigator !== 'undefined' && !navigator.userAgent.includes('jsdom');

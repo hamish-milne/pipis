@@ -1,4 +1,4 @@
-import { type Cleanup, type Reactive, REACTIVE } from './core.ts';
+import { type Cleanup, type Reactive, REACTIVE } from './base.ts';
 
 /** What `subscribe` returns in the libraries `adapt` is for: a cleanup function (Zustand, Redux, Svelte), or a Subscription (RxJS, XState). */
 type Unsubscribable = Cleanup | { unsubscribe(): void };

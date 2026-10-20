@@ -19,6 +19,8 @@ export type BundleOptions = {
   format?: 'esm' | 'iife';
   /** The global an `iife` bundle assigns its exports to. */
   globalName?: string;
+  /** Conditions for `exports` and `imports` in package.json, as a bundler is given them: `['pipis-server']` makes `pipis` the server's. */
+  conditions?: string[];
 };
 
 /** The bundle's code. */
@@ -30,6 +32,7 @@ export async function bundle(o: BundleOptions): Promise<string> {
     input: entryId,
     platform: o.platform ?? 'browser',
     logLevel: 'warn',
+    ...(o.conditions ? { resolve: { conditionNames: o.conditions } } : {}),
     // A module that cannot be found is an error here, not an external to fail on later.
     onLog: (_level, log) => {
       if (log.code === 'UNRESOLVED_IMPORT') unresolved.push(log.message.replace(ANSI, ''));

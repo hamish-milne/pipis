@@ -4,6 +4,9 @@ import { playwright } from 'vite-plus/test/browser-playwright';
 import tailwindcss from '@tailwindcss/vite';
 import { docsSite } from './site/vite-plugin.ts';
 
+// Tests that need `pipis` to be the server's: they run in their own project.
+const SERVER_ONLY = ['**/node_modules/**', '**/*.server.test.*'];
+
 export default defineConfig({
   // The documentation site: `vp dev` serves it (and reloads on a change), `vp build` writes it into dist/ (site/vite-plugin.ts).
   // Tailwind is for the demo apps only.
@@ -34,6 +37,20 @@ export default defineConfig({
           name: 'jsdom',
           environment: 'jsdom',
           include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.{ts,mjs}'],
+          exclude: SERVER_ONLY,
+        },
+      },
+      // Server rendering is tested with `pipis` as the server's platform: the condition is what the bundler is given (docs/adr/0019).
+      // No DOM: the server has none, and a test that reaches for `document` should fail.
+      {
+        extends: true,
+        resolve: { conditions: ['pipis-server'] },
+        ssr: { resolve: { conditions: ['pipis-server'] } },
+        test: {
+          name: 'server',
+          environment: 'node',
+          setupFiles: [],
+          include: ['src/**/*.server.test.{ts,tsx}', 'site/**/*.server.test.{ts,tsx}'],
         },
       },
       // The documentation kit and the site: Node tests (the site test starts its own Chromium), with no DOM of their own.
@@ -51,6 +68,7 @@ export default defineConfig({
         test: {
           name: 'chromium',
           include: ['src/**/*.test.{ts,tsx}'],
+          exclude: SERVER_ONLY,
           browser: {
             enabled: true,
             headless: true,
@@ -87,11 +105,27 @@ export default defineConfig({
       // The documentation site, into dist/. `node site/serve.ts` serves it, and `vp dev` serves it with reloading.
       build: { command: 'vp build', cache: false },
       // The site is built under a path of its own and used in Chromium: every page opened, every example run, one edited, the search used.
-      'site:test': { command: 'vp test run --project site', cache: false },
+      // The kit's tests, the Markdown component (rendered as a server renders it, over every page of the docs), and the site itself.
+      'site:test': { command: 'vp test run docs-kit/ site/', cache: false },
+      // The server's markup is the browser build's: the same components rendered both ways and compared (tools/server.test.ts).
+      'server:test': { command: 'vp test run tools/server.test.ts', cache: false },
       all: {
         command: 'echo all green',
         cache: false,
-        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'deps', 'docs', 'actions', 'size:check', 'pack:test', 'build', 'site:test'],
+        dependsOn: [
+          'check',
+          'lint',
+          'fmt:check',
+          'test',
+          'deps',
+          'docs',
+          'actions',
+          'size:check',
+          'pack:test',
+          'build',
+          'site:test',
+          'server:test',
+        ],
       },
     },
   },
@@ -104,6 +138,8 @@ export default defineConfig({
       'coverage/**',
       'node_modules/**',
       'pnpm-lock.yaml',
+      // Written by tools/reflect.ts from jsdom.
+      'src/pipis/reflect.ts',
       // LLM.md is written for models, with hand-aligned tables that the formatter would reflow.
       'LLM.md',
       '**/*.md',
@@ -172,7 +208,15 @@ export default defineConfig({
               includeJsBuiltins: { preset: 'auto' },
               // The floor is for the APIs the library calls, which an app cannot lower. Syntax can be lowered by the app's bundler, so the
               // syntax the library is written in is listed here, on purpose; newer syntax the rule recognises, and is not listed, fails.
-              ignoreFeatures: ['let-const', 'class-syntax', 'destructuring', 'spread', 'nullish-coalescing', 'logical-assignments'],
+              ignoreFeatures: [
+                'let-const',
+                'template-literals',
+                'class-syntax',
+                'destructuring',
+                'spread',
+                'nullish-coalescing',
+                'logical-assignments',
+              ],
             },
           ],
           // A cast is a claim the compiler cannot check, so each one in the library is owned in writing: a comment that gives the reason.

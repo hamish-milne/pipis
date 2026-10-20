@@ -4,7 +4,7 @@ The elements and functions for the things an app needs beyond state and structur
 
 ## Effects
 
-`Effect` runs a function when it is mounted and the function it returns when it is unmounted. It is the place for anything that needs to be undone: a listener, a timer, an animation loop. It renders nothing.
+`Effect` runs a function when it is mounted and the function it returns when it is unmounted. It is the place for anything that needs to be undone: a listener, a timer, an animation loop. It renders nothing. An effect is for the browser: when a component is rendered on a server it is not run ([Server rendering](server-rendering.md)).
 
 ```tsx live title="Effect"
 import { Effect, reactive } from 'pipis';
@@ -50,7 +50,7 @@ export default function Title() {
 
 ## Suspense
 
-`Suspense` handles the loading, loaded and failed states of asynchronous data. Pass a function to `promise` to fetch once on mount, or a reactive promise to fetch again whenever you assign a new one. While the promise is pending it shows `loading`; when it resolves the child, a function of the data, is shown; if it rejects, `error` is shown.
+`Suspense` handles the loading, loaded and failed states of asynchronous data. Pass a function to `promise` to fetch once on mount, or a reactive promise to fetch again whenever you assign a new one. While the promise is pending it shows `loading`; when it resolves the child, a function of the data, is shown; if it rejects, `error` is shown. On a server a `Suspense` shows `loading` and does not start the promise.
 
 ```tsx live title="Suspense"
 import { Suspense } from 'pipis';
@@ -78,7 +78,7 @@ When `promise` is a reactive and is assigned again, the latest promise wins: one
 
 ## Portals
 
-`Portal` renders its children into a different place in the document, marked by a `PortalTarget`. The target records its position in a reactive value, which you pass to the portal. The position is a pair of live node references, so it keeps working if the target is moved, for example by a reordering `List`.
+`Portal` renders its children into a different place in the document, marked by a `PortalTarget`. The target records its position in a reactive value, which you pass to the portal. The position is a pair of live node references, so it keeps working if the target is moved, for example by a reordering `List`. A portal is rendered by an effect, so it is not rendered on a server.
 
 ```tsx live title="Portal"
 import { Portal, PortalTarget, reactive, type PortalTargetValue } from 'pipis';
@@ -103,7 +103,7 @@ Several portals can share one target. Each inserts its content before the target
 
 ## The document head
 
-`Helmet` renders its children into `document.head`, before what is already there, and removes them when it is unmounted. Use it for a title, a `meta` tag or a stylesheet that belongs to a part of the app:
+`Helmet` renders its children into `document.head`, before what is already there, and removes them when it is unmounted. Use it for a title, a `meta` tag or a stylesheet that belongs to a part of the app. On a server it renders into the `head` that `renderToString` returns:
 
 ```tsx live title="Helmet"
 import { Helmet } from 'pipis';

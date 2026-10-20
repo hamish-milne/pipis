@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { Fragment, textNode, type JSXElement } from './core.ts';
+import { Fragment, textNode, type JSXElement } from './index.ts';
 import { select } from './reactive.ts';
 import { Dynamic, ErrorBoundary, If, List, OneOf, Portal, ReactiveList, Suspense, Watch, type PortalTargetValue } from './dynamic.ts';
 import { h, html, mount, tracked } from '../test/dom.ts';

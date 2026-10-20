@@ -1,20 +1,22 @@
 /** @jsxImportSource pipis */
 // The chrome of a page of the documentation: the header, the navigation, the contents of the page, and the way to the previous and next
-// pages. It is written in pipis, and run once for each page when the site is built (`site/build.ts` mounts it in a DOM and reads the HTML).
+// pages. It is written in pipis, and rendered to HTML once for each page when the site is built (`site/build.ts` does it as an app's server would, with `renderToString`).
 import type { JSXElement } from 'pipis';
 import type { NavItem, NavSection } from '../docs-kit/nav.ts';
 import type { PageModel } from '../docs-kit/build.ts';
+import { docsRenderer } from './docs.tsx';
+import { Markdown } from './markdown.tsx';
 
 function Navigation(props: { nav: NavSection[]; page: PageModel }): JSXElement {
   return (
-    <nav className="side" aria-label="Documentation">
+    <nav className="side" ariaLabel="Documentation">
       {props.nav.map((section) => (
         <section>
           <h2>{section.title}</h2>
           <ul>
             {section.items.map((item) => (
               <li>
-                <a href={props.page.href(item.url)} aria-current={props.page.current?.url === item.url ? 'page' : null}>
+                <a href={props.page.href(item.url)} ariaCurrent={props.page.current?.url === item.url ? 'page' : null}>
                   {item.title}
                 </a>
               </li>
@@ -29,7 +31,7 @@ function Navigation(props: { nav: NavSection[]; page: PageModel }): JSXElement {
 function Pager(props: { previous: NavItem | undefined; next: NavItem | undefined; page: PageModel }): JSXElement {
   const { previous, next, page } = props;
   return (
-    <nav className="pager" aria-label="Pages">
+    <nav className="pager" ariaLabel="Pages">
       {previous ? (
         <a rel="prev" href={page.href(previous.url)}>
           <small>Previous</small>
@@ -53,7 +55,7 @@ function Pager(props: { previous: NavItem | undefined; next: NavItem | undefined
 function Contents(props: { page: PageModel }): JSXElement {
   const { headings } = props.page;
   return (
-    <aside className="toc" aria-label="On this page">
+    <aside className="toc" ariaLabel="On this page">
       {headings.length > 0 && <h2>On this page</h2>}
       <ul>
         {headings.map((h) => (
@@ -71,17 +73,17 @@ export function Page(props: { page: PageModel }): JSXElement {
   return (
     <div className="shell">
       <header className="top">
-        <button type="button" className="icon menu" data-action="menu" aria-label="Show the navigation">
+        <button type="button" className="icon menu" data-action="menu" ariaLabel="Show the navigation">
           ☰
         </button>
         <a className="brand" href={page.href('index.html')}>
           {page.siteTitle}
         </a>
         <span className="spacer" />
-        <button type="button" className="search-button" data-action="search" aria-label="Search the documentation">
+        <button type="button" className="search-button" data-action="search" ariaLabel="Search the documentation">
           Search <kbd>Ctrl K</kbd>
         </button>
-        <button type="button" className="icon" data-action="theme" aria-label="Switch between the light and dark theme">
+        <button type="button" className="icon" data-action="theme" ariaLabel="Switch between the light and dark theme">
           ◐
         </button>
         <a className="repo" href={page.repoHome}>
@@ -91,12 +93,9 @@ export function Page(props: { page: PageModel }): JSXElement {
       <Navigation nav={page.nav} page={page} />
       <main>
         {/* What the search reads of a page is what is inside this element. */}
-        <article
-          data-pagefind-body=""
-          ref={(el) => {
-            el.innerHTML = page.html;
-          }}
-        />
+        <article data-pagefind-body="">
+          <Markdown tokens={page.tokens} renderer={docsRenderer(page.root, page.sourceRoot)} />
+        </article>
         <Pager previous={page.previous} next={page.next} page={page} />
       </main>
       <Contents page={page} />

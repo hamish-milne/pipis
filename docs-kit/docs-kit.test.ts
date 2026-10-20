@@ -1,16 +1,11 @@
 import { describe, expect, it } from 'vite-plus/test';
 import { parseNav } from './nav.ts';
-import { pageUrl, relativeUrl, render, type RenderContext } from './markdown.ts';
+import { decodeEntities } from './entities.ts';
+import { pageUrl, parsePage, relativeUrl, type DocCode, type DocHeading, type PageContext } from './markdown.ts';
+import type { Tokens } from 'marked';
 import { toJs } from './transform.ts';
 
-const context = (file: string, extra: Partial<RenderContext> = {}): RenderContext => ({
-  file,
-  repoUrl: 'https://example.test/repo/blob/main',
-  root: '../',
-  example: (block) => `[example ${block.id}]`,
-  directives: {},
-  ...extra,
-});
+const context = (file: string): PageContext => ({ file, repoUrl: 'https://example.test/repo/blob/main' });
 
 describe('the pages of a site', () => {
   it('maps a Markdown file to its page, and a README to the index of its folder', () => {
@@ -60,9 +55,9 @@ describe('the navigation', () => {
   });
 });
 
-describe('Markdown to a page', () => {
+describe('reading a page', () => {
   it('gives a heading the anchor GitHub gives it, so a link works on both', () => {
-    const { html, headings, title } = render(
+    const { tokens, headings, title } = parsePage(
       '# The page\n\n## The `Axis` class\n\n### Plot x/y\n\n## Again\n\n## Again\n',
       context('a.md'),
     );
@@ -73,23 +68,32 @@ describe('Markdown to a page', () => {
       { depth: 2, id: 'again', text: 'Again' },
       { depth: 2, id: 'again-1', text: 'Again' },
     ]);
-    expect(html).toContain('<h2 id="the-axis-class">');
+    expect(tokens.filter((t): t is DocHeading => t.type === 'heading').map((t) => t.id)).toEqual([
+      'the-page',
+      'the-axis-class',
+      'plot-xy',
+      'again',
+      'again-1',
+    ]);
   });
 
   it('points a link to another page at that page, and one to a file outside the docs at its place on the host', () => {
-    const { html } = render(
+    const { tokens } = parsePage(
       '[a](b.md) [c](../start/d.md#x) [e](README.md) [f](../../LLM.md) [g](https://example.test/x.md) [h](#here)',
       context('guide/a.md'),
     );
-    expect(html).toContain('href="b.html"');
-    expect(html).toContain('href="../start/d.html#x"');
-    expect(html).toContain('href="index.html"');
-    expect(html).toContain('href="https://example.test/repo/blob/main/LLM.md"');
-    expect(html).toContain('href="https://example.test/x.md"');
-    expect(html).toContain('href="#here"');
+    const paragraph = tokens[0] as Tokens.Paragraph;
+    expect(paragraph.tokens.filter((t): t is Tokens.Link => t.type === 'link').map((l) => l.href)).toEqual([
+      'b.html',
+      '../start/d.html#x',
+      'index.html',
+      'https://example.test/repo/blob/main/LLM.md',
+      'https://example.test/x.md',
+      '#here',
+    ]);
   });
 
-  it('makes a live block an example, and shows a check block and the rest as code', () => {
+  it('makes a live block an example, and reads what the info string says of the rest', () => {
     const markdown = [
       '```tsx live title="One"',
       'export default () => <p />;',
@@ -103,26 +107,32 @@ describe('Markdown to a page', () => {
       'npm i',
       '```',
     ].join('\n');
-    const { html, examples } = render(markdown, context('a.md'));
+    const { tokens, examples } = parsePage(markdown, context('a.md'));
     expect(examples.map((b) => b.id)).toEqual(['one']);
-    expect(html).toContain('[example one]');
-    expect(html).not.toContain('live title');
-    expect(html.match(/class="code"/g)).toHaveLength(2);
-    expect(html).toContain('let');
+    const code = tokens.filter((t): t is DocCode => t.type === 'code');
+    expect(code.map((c) => [c.language, c.block?.id])).toEqual([
+      ['tsx', 'one'],
+      ['tsx', undefined],
+      ['bash', undefined],
+    ]);
   });
 
-  it('gives a block of a directive to it, with where the page is', () => {
-    const { html } = render(
-      '```demo\ntodo\n```\n',
-      context('demos/a.md', { directives: { demo: (body, ctx) => `<b>${body} from ${ctx.root}</b>` } }),
+  it('says what the page is called and what it is about, as text', () => {
+    const page = parsePage('# A `page` &amp; more\n\nThis is **the** first <i>paragraph</i> &lt;ok&gt;.\n\nSecond.\n', context('a.md'));
+    expect(page.title).toBe('A page & more');
+    expect(page.description).toBe('This is the first paragraph <ok>.');
+  });
+
+  it('refuses a block that is wrong, naming where', () => {
+    expect(() => parsePage('```tsx live\nx\n```\n', context('x.md'))).toThrow(/x\.md:1: a live block needs title/);
+  });
+});
+
+describe('character references', () => {
+  it('are made into the characters they stand for, and any the table does not know are left as they are', () => {
+    expect(decodeEntities('a &amp; b &lt;c&gt; &quot;d&quot; &#39;e&#39; &#x41; &copy; &unknownthing; &#0; &#99999999;')).toBe(
+      'a & b <c> "d" \'e\' A © &unknownthing; &#0; &#99999999;',
     );
-    expect(html).toContain('<b>todo from ../</b>');
-  });
-
-  it('escapes what is code', () => {
-    const { html } = render('```ts\nconst a = "<b>" && 1;\n```\n', context('a.md'));
-    expect(html).not.toContain('<b>');
-    expect(html).toContain('&lt;b>');
   });
 });
 

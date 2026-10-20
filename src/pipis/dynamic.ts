@@ -2,16 +2,16 @@ import {
   type Cleanup,
   type JSXElement,
   type Reactive,
-  Fragment,
   type RefProp,
   setRef,
   isReactive,
-  createMarker,
   moveNode,
   type JSXParent,
   type JSXSibling,
   type ChildrenProp,
-} from './core.ts';
+} from './base.ts';
+import { Fragment } from './core.ts';
+import { IS_CLIENT, createMarker, head } from '#platform';
 import { getErrorHandler, handleError, reactive, select, subscribeWithCatch, withErrorHandler, type ReactiveReadonly } from './reactive.ts';
 
 type MountFn = (parent: Exclude<JSXParent, undefined>, sibling: JSXSibling) => Cleanup | void;
@@ -215,7 +215,8 @@ export function effect(fn: () => Cleanup | undefined): JSXElement {
   return function Effect_element(parent, sibling = null) {
     if (parent) {
       // Wrapped here, at mount, so that it reports to the ErrorBoundary it is mounted under (it was built before that existed).
-      cleanup ??= handleError(fn)() ?? EMPTY_CLEANUP;
+      // An effect is for the browser: on a server nothing runs it, and `IS_CLIENT` being a constant removes this test from a browser's build.
+      cleanup ??= IS_CLIENT ? (handleError(fn)() ?? EMPTY_CLEANUP) : EMPTY_CLEANUP;
     } else {
       cleanup?.();
       cleanup = undefined;
@@ -388,9 +389,9 @@ export function Helmet(props: ChildrenProp): JSXElement {
   let mounted = false;
   return function Helmet_element(parent, sibling = null) {
     if (parent && !mounted) {
-      const { head } = document;
+      const target = head();
       // This ensures new Helmet children are inserted at the beginning, so they take priority.
-      children(head, head.firstChild);
+      children(target, target.firstChild);
       mounted = true;
     } else if (!parent && mounted) {
       children();

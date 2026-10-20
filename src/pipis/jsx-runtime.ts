@@ -1,4 +1,5 @@
-import { type JSXElement, type ChildrenProp, createElement, type CoreIntrinsicElements } from './core.ts';
+import type { JSXElement, ChildrenProp } from './base.ts';
+import { createElement, type CoreIntrinsicElements } from './core.ts';
 export { Fragment } from './core.ts';
 
 /** What a JSX tag names: a lowercase tag of an HTML or SVG element, or a component, which is a function from its props to an element. */

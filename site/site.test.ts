@@ -71,6 +71,22 @@ describe('the built site', () => {
     }
   });
 
+  it('labels what has no text for a person using a screen reader, and marks the current page', () => {
+    const html = readFileSync(join(out, 'guide/lifecycle.html'), 'utf8');
+    for (const label of [
+      'Show the navigation',
+      'Search the documentation',
+      'Switch between the light and dark theme',
+      'Documentation',
+      'On this page',
+      'Pages',
+    ]) {
+      expect(html, label).toContain(`aria-label="${label}"`);
+    }
+    expect(html).toContain('aria-current="page"');
+    expect(html.match(/aria-label="Link to this section"/g)?.length, 'every heading has a link to itself').toBeGreaterThan(3);
+  });
+
   it('has links that go to a page and a heading that exist, and no page that nothing links to', () => {
     const ids = new Map<string, Set<string>>();
     const links = new Map<string, string[]>();

@@ -2,7 +2,7 @@
 
 pipis is a small JSX UI framework with **no virtual DOM, no re-rendering and no hooks**. Read this whole file before writing code. Sections are ordered by how much they matter. A checklist to run before you answer is at the end.
 
-Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write. Never import from `react`.
+Everything is imported by name from `"pipis"`. There is no default export. Do not invent sub-paths: the only others are `pipis/jsx-runtime` and `pipis/jsx-dev-runtime`, which the compiler imports for JSX and you never write, and `pipis/server`, for rendering to HTML on a server (section 7). Never import from `react`.
 
 To use JSX, the project's `tsconfig.json` needs `"jsx": "react-jsx"` and `"jsxImportSource": "pipis"` (and its bundler the same import source: Vite `esbuild: { jsxImportSource: "pipis" }`). A single file can instead start with `/** @jsxImportSource pipis */`. pipis needs a DOM and ES2015 built-ins (`Map`, `Set`, `Symbol`); its source uses newer syntax (`??`, `?.`, `??=`), which a bundler targeting an older browser must lower.
 
@@ -59,11 +59,13 @@ If the project already has a main file that mounts your component, do not mount 
 | change some fields of an object state                           | `patch(state, { field: value })`                                    |
 | render somewhere else in the DOM / into `<head>`                | `Portal` + `PortalTarget` / `Helmet`                                |
 | share a value with deep descendants                             | `defineContext`                                                     |
+| render HTML on a server, or at build time                       | `renderToString(<App />)` from `"pipis/server"` (see section 7)     |
+| run browser-only code in a component that is also server-rendered | `IS_CLIENT`, or an `Effect` (which does not run on a server)      |
 | get a DOM node                                                  | `ref` prop, then use the node inside an `Effect`                    |
 | pass a static value where a Reactive is expected                | `constant(value)`                                                   |
 | combine several state values                                    | keep them in ONE reactive object and `select` fields off it        |
 
-**Exports** (import only these): `reactive, select, patch, constant, isReactive, subscribe, adapt, defineContext, withErrorHandler, getErrorHandler, handleError, subscribeWithCatch, If, OneOf, List, ReactiveList, Dynamic, Effect, effect, Watch, Suspense, ErrorBoundary, Portal, PortalTarget, Helmet, Fragment, emptyElement`, plus the low-level `createElement, textNode, createMarker, moveNode, setRef, dynamic`. Types are exported too (for example `type JSXElement`). Import every name you use.
+**Exports** (import only these): `reactive, select, patch, constant, isReactive, subscribe, adapt, defineContext, withErrorHandler, getErrorHandler, handleError, subscribeWithCatch, If, OneOf, List, ReactiveList, Dynamic, Effect, effect, Watch, Suspense, ErrorBoundary, Portal, PortalTarget, Helmet, Fragment, emptyElement, IS_CLIENT`, plus the low-level `createElement, textNode, createMarker, moveNode, setRef, dynamic`. Types are exported too (for example `type JSXElement`). Import every name you use.
 
 ## 4. If you know React: habits that break here
 
@@ -312,6 +314,15 @@ There is no `fallback` or `success` prop. The loading UI is the `loading` prop, 
 <Suspense promise={load} emptyData={{ name: "" }} loading={<p>Loading...</p>}>
   {(user) => <p>{select(user, "name")}</p>}
 </Suspense>
+```
+
+### 19. Browser-only code in a component that is also rendered on a server
+A server has no `window`, `document`, `localStorage` or `matchMedia`, and a component body runs there too. Guard what only a browser has with `IS_CLIENT` (a constant, so the branch is removed from the server's build), or put it in an `Effect` or `Watch`, which a server does not run.
+```tsx
+// WRONG: throws on the server, which has no localStorage
+const theme = reactive(localStorage.getItem("theme") ?? "light");
+// RIGHT: the server renders the default, and the browser reads the stored choice
+const theme = reactive(IS_CLIENT ? (localStorage.getItem("theme") ?? "light") : "light");
 ```
 
 ## 6. Worked examples
@@ -610,10 +621,24 @@ Helmet(props: ChildrenProp): JSXElement                       // renders its chi
 ```
 `Portal` renders its children at the target's live position. Several Portals to one target insert in mount order.
 
+### Server rendering
+```ts
+IS_CLIENT: boolean                                                   // true in a browser, false in the server's build; a constant
+renderToString(element: JSXElement): { html: string; head: string }  // from "pipis/server"
+serializeData(value: unknown): string                                // from "pipis/server": JSON that is safe inside <script type="application/json">
+```
+For HTML on a server (or at build time) the server's code is bundled with the **`pipis-server` condition**, which makes `pipis` the server's build; nothing else in the app changes. Vite: `ssr: { noExternal: ["pipis"], resolve: { conditions: ["pipis-server"] } }`. Node: `node --conditions=pipis-server`. `renderToString` throws, saying so, if `pipis` is the browser's build.
+```tsx
+const { html, head } = renderToString(<App />);
+```
+It is synchronous (no `await` in a component) and renders each reactive value as it is. On a server `Effect`, `Watch`, `Portal` and `Suspense`'s promise do not run (a `Suspense` shows `loading`), `ref`s and event handlers are not used, `Helmet` goes to `head`, and a tag HTML does not know is SVG as in a browser. The browser does not adopt the markup: it mounts its own over it. Pass data to the browser as a prop, written with `serializeData` into a `<script type="application/json">`.
+
 ## 8. Styling and DOM notes
 
 - **`style`** is an object with one entry per CSS property. A value is a string with units (`"10px"`, `"50%"`) or a `Reactive<string>`: `style={{ color: "red", left: select(x, (v) => `${v}px`) }}`. The object itself is not reactive, and numbers are not accepted.
 - **SVG elements** (`svg`, `path`, `circle`, `rect`, `g`, ...) get their attributes through `setAttribute`. So every SVG attribute value is a string (or a `Reactive<string>`), including numbers (`r="5"`, `stroke-width="2"`; give units where the SVG attribute needs them), names are used as written in SVG (`viewBox`, `stroke-width`, `stroke-linecap`, not React's `strokeWidth`), and the class attribute is `class`, not `className`. This applies to SVG elements only.
+- **`aria-*` props are attributes too, like `data-*`** (`aria-label="Close"`; the camelCase property `ariaLabel` also works, but write the hyphenated form if the value can be absent). Both take a string or a `Reactive`, and `null`, `undefined` or `false` leaves the attribute out, so to write the text `false` give the string `"false"` (`aria-expanded="false"`).
+- **A property that is given `null` or `undefined` is no attribute** (`<a href={maybe} title={maybe}>`): pass the value or nothing, never the text of it. `false` is a value for a property (`draggable={false}` is `draggable="false"`, and `hidden={false}` is not hidden).
 - **`data-*` props accept a `Reactive<boolean>` directly.** Truthy sets the dataset key; `null`, `undefined` or `false` deletes it. Tailwind's presence variant (`data-done:line-through`, no brackets) works off this. Use the bracket form (`data-[state=open]:...`) only for non-boolean string values. No ternary-to-string is needed.
 - **Tailwind classes are static strings.** Do not build class names from state with template strings (`` `w-${n}` `` is invisible to Tailwind's scanner). Use `select` to choose between complete class names, or `style` for continuous values like positions.
 - **`disabled={reactiveBoolean}`** is a normal property binding. Disabled buttons never fire `onclick`, so the handler needs no extra guard.
@@ -629,7 +654,7 @@ Helmet(props: ChildrenProp): JSXElement                       // renders its chi
 - **Construction** (the component body) must be idempotent, with no side effects or subscriptions. **Mount** may have side effects, which should be reversible on unmount. Do not mutate app state during mount (except in `Portal`).
 
 ```ts
-moveNode(element: ChildNode, parent: JSXParent, sibling?): void
+moveNode(element: ChildNode, parent: JSXParent, sibling?): boolean   // true if it moved the node
 textNode(content: Content | Reactive<Content>): JSXElement
 createMarker(text?: string): Comment         // stable anchor node
 createElement<T extends keyof IntrinsicElements>(type: T, props): JSXElement
