@@ -13,10 +13,11 @@ import { theme } from './state.ts';
 /** Content that only the server makes. */
 export type Slot = (() => JSXElement) | undefined;
 
-/** Highlighted code, and the button that copies it. */
-export function Code(props: { content?: Slot }): JSXElement {
+/** Highlighted code, with the name it was given if it has one, and the button that copies it. */
+export function Code(props: { title?: string; content?: Slot }): JSXElement {
   return (
     <div className="code">
+      {props.title && <div className="code-title">{props.title}</div>}
       <Slot>{props.content}</Slot>
       <CopyButton />
     </div>

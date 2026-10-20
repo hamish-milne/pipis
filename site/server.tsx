@@ -19,6 +19,9 @@ export function Document(props: { page: PageModel; assets: Assets }): JSXElement
         <title>{`${page.title} · ${page.siteTitle}`}</title>
         <meta name="description" content={page.description} />
         <script innerHTML={THEME_SCRIPT} />
+        {assets.fonts.map((href) => (
+          <link rel="preload" as="font" type="font/woff2" crossOrigin="" href={href} />
+        ))}
         {assets.styles.map((href) => (
           <link rel="stylesheet" href={href} />
         ))}

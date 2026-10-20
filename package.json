@@ -43,6 +43,8 @@
     "./hydrate": "./src/pipis/hydrate.ts"
   },
   "devDependencies": {
+    "@fontsource-variable/inter": "catalog:",
+    "@fontsource-variable/jetbrains-mono": "catalog:",
     "@preact/signals-core": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/jsdom": "catalog:",

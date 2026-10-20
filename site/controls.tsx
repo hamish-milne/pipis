@@ -1,15 +1,21 @@
 /** @jsxImportSource pipis */
 // What the page does that is not reading: the small components of the page that are not about what it says. They are the page's own, in its one
 // tree (site/app.tsx), made on the server and hydrated in the browser, so each is written once and has no island of its own.
-import { Effect, Watch, reactive, type JSXElement } from 'pipis';
+import { Effect, Watch, reactive, select, type JSXElement } from 'pipis';
 import { menuOpen, theme } from './state.ts';
 
 /** The switch between the light and the dark theme. */
 export function ThemeToggle(): JSXElement {
   const choose = () => {
-    theme.value = theme.value === 'dark' ? 'light' : 'dark';
+    const next = theme.value === 'dark' ? 'light' : 'dark';
+    const apply = () => {
+      theme.value = next;
+    };
+    // The change of colours is a fade of the page, where the browser can do one and the reader has not asked for less motion.
+    if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(apply);
+    else apply();
     try {
-      localStorage.setItem('docs-theme', theme.value);
+      localStorage.setItem('docs-theme', next);
     } catch {
       // Storage can be off (a private window, blocked site data): the choice then lasts for the page only.
     }
@@ -70,6 +76,7 @@ export function CopyButton(): JSXElement {
     <button
       type="button"
       className="copy"
+      data-copied={select(label, (l) => l === 'Copied')}
       onclick={async (event) => {
         const block = event.target.closest('.code, .example-code');
         const text = block?.querySelector('textarea')?.value ?? block?.querySelector('pre')?.textContent ?? '';

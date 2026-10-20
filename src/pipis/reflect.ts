@@ -62,6 +62,7 @@ export const REFLECTED: Record<string, [attribute: string, kind: 'string' | 'num
   ariaValueMin: ['aria-valuemin', 'string'],
   ariaValueNow: ['aria-valuenow', 'string'],
   ariaValueText: ['aria-valuetext', 'string'],
+  as: ['as', 'string', ['link']],
   autocapitalize: ['autocapitalize', 'string'],
   autocomplete: ['autocomplete', 'string', ['input', 'textarea']],
   autofocus: ['autofocus', 'boolean', ['button', 'input', 'select', 'textarea']],

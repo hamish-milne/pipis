@@ -26,6 +26,8 @@ export interface DocCode extends Tokens.Code {
   language: string;
   /** The block, if the info string says `live`. */
   block?: DocBlock;
+  /** What the info string calls the block (`title="..."`), if it does. */
+  title?: string;
 }
 
 export interface PageContext {
@@ -110,14 +112,14 @@ export function parsePage(markdown: string, ctx: PageContext): ParsedPage {
     } else if (token.type === 'code') {
       // The token keeps only the first word of the info string, and the block reader wants all of it.
       const info = (/^\s*(?:`{3,}|~{3,})([^\n]*)/.exec(token.raw)?.[1] ?? '').trim();
-      const { language, flags } = parseInfo(info, ctx.file);
+      const { language, flags, values } = parseInfo(info, ctx.file);
       let block: DocBlock | undefined;
       if (flags.has('live')) {
         block = blocks[next++];
         if (!block) throw new Error(`${ctx.file}: a live block was not read`);
         examples.push(block);
       }
-      Object.assign(token, { language, block });
+      Object.assign(token, { language, block, title: values.get('title') });
     } else if (token.type === 'link') {
       token.href = link(token.href, ctx);
     } else if (token.type === 'paragraph' && !description) {

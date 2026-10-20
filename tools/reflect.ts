@@ -134,6 +134,7 @@ export function generate(): string {
     ['decoding', 'decoding', 'string', ['img']],
     ['referrerPolicy', 'referrerpolicy', 'string', ['a', 'area', 'iframe', 'img', 'link', 'script']],
     ['popoverTargetAction', 'popovertargetaction', 'string', ['button', 'input']],
+    ['as', 'as', 'string', ['link']],
   ];
   for (const [name, attribute, kind, tags] of NEWER) {
     if (!props.has(name)) props.set(name, { attribute, kind, tags: tags ?? html });

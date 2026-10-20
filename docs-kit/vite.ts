@@ -17,7 +17,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { build as viteBuild, createServer, type InlineConfig, type Plugin, type ViteDevServer } from 'vite-plus';
 import { frameFiles, type FrameOptions } from './frames.ts';
 import { stripToJs } from '../tools/strip-types.ts';
-import { loadPages, pagesData, type Assets, type PageModel, type PagesOptions } from './pages.ts';
+import { assetLinks } from './handler.ts';
+import { loadPages, pagesData, type AssetFiles, type Assets, type PageModel, type PagesOptions } from './pages.ts';
 import { writeSearchIndex } from './search.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -122,10 +123,7 @@ function styleSheet(options: DocsOptions, root: string, watch: (file: string) =>
 }
 
 /** The script and the style sheets that a built page links to, from Vite's manifest of the browser's build. */
-function assetsOf(manifest: Record<string, { file: string; css?: string[]; imports?: string[]; isEntry?: boolean }>): {
-  script: string;
-  styles: string[];
-} {
+function assetsOf(manifest: Record<string, { file: string; css?: string[]; imports?: string[]; isEntry?: boolean }>): AssetFiles {
   const entry = Object.values(manifest).find((chunk) => chunk.isEntry);
   if (!entry) throw new Error("The browser's build has no entry");
   const styles = new Set<string>();
@@ -141,7 +139,10 @@ function assetsOf(manifest: Record<string, { file: string; css?: string[]; impor
     }
   };
   visit(entry);
-  return { script: entry.file, styles: [...styles] };
+  const fonts = Object.values(manifest)
+    .map((chunk) => chunk.file)
+    .filter((file) => file.endsWith('.woff2'));
+  return { script: entry.file, styles: [...styles], fonts };
 }
 
 const write = (file: string, content: string) => {
@@ -277,7 +278,7 @@ export function docsKit(options: DocsOptions): Plugin {
     /** The pages as files, in `into`. */
     const writePages = (into: string) => {
       for (const page of pages) {
-        const html = render(page, { script: `${page.root}${assets.script}`, styles: assets.styles.map((s) => `${page.root}${s}`) });
+        const html = render(page, assetLinks(assets, page.root));
         write(join(into, page.url), `<!doctype html>\n${html}\n`);
       }
     };
@@ -387,7 +388,7 @@ export function docsKit(options: DocsOptions): Plugin {
         const mod = await server.ssrLoadModule(resolve(root, options.server));
         const render: Render = mod.render;
         // The style sheet is linked as well as imported by the script, so that the page is styled when it is first painted and not when the script runs.
-        const html = render(page, { script: `/@id/__x00__${ENTRY}`, styles: [`/@id/__x00__${STYLES}`] });
+        const html = render(page, { script: `/@id/__x00__${ENTRY}`, styles: [`/@id/__x00__${STYLES}`], fonts: [] });
         res.statusCode = 200;
         res.setHeader('content-type', TYPES['.html'] ?? 'text/html');
         res.end(await server.transformIndexHtml(req.url ?? path, `<!doctype html>\n${html}\n`));

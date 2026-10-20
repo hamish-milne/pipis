@@ -47,11 +47,16 @@ export interface PageModel {
   merged?: PageModel[];
 }
 
-/** The script and the style sheets of the site's page, as links from the page that is being made. */
-export interface Assets {
+/** The script, the style sheets and the fonts of the site's page, as files of the build (paths from its root). */
+export interface AssetFiles {
   script: string;
   styles: string[];
+  /** The fonts the style sheets use, which a page asks for early, so that the text is not shown in another face and then changed. */
+  fonts: string[];
 }
+
+/** What a page is given of them: as links from the page that is being made. */
+export type Assets = AssetFiles;
 
 export interface PagesOptions {
   /** The repository, which the paths below are relative to. */

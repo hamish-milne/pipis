@@ -13,7 +13,7 @@ import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { dirname, join, posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Assets, PageData, PageModel, PagesData } from './pages.ts';
+import type { AssetFiles, Assets, PageData, PageModel, PagesData } from './pages.ts';
 
 export interface HandlerOptions {
   /** The path the site is served under, if it is not `/`: `/docs/` for `https://example.com/docs/`. The pages link by relative paths, so this is all they need. */
@@ -34,6 +34,13 @@ const relativeUrl = (from: string, target: string): string => {
 };
 /** What a page is called on a site that is a single page (docs-kit/markdown.ts has the same). */
 const pageId = (url: string): string => url.replace(/\.html$/, '').replace(/\//g, '-');
+
+/** The files of the build as links from a page whose way to the site's root is `root`. */
+export const assetLinks = (files: AssetFiles, root: string): Assets => ({
+  script: `${root}${files.script}`,
+  styles: files.styles.map((s) => `${root}${s}`),
+  fonts: files.fonts.map((f) => `${root}${f}`),
+});
 
 /** The models of the pages that `pagesData` wrote. */
 export function pagesOf(data: PagesData, sourceRoot?: string): PageModel[] {
@@ -56,7 +63,7 @@ export function pagesOf(data: PagesData, sourceRoot?: string): PageModel[] {
 export async function createHandler(options: HandlerOptions = {}) {
   const dir = dirname(fileURLToPath(import.meta.url));
   const data: PagesData = JSON.parse(readFileSync(join(dir, 'pages.json'), 'utf8'));
-  const assets: { script: string; styles: string[] } = JSON.parse(readFileSync(join(dir, 'assets.json'), 'utf8'));
+  const assets: AssetFiles = JSON.parse(readFileSync(join(dir, 'assets.json'), 'utf8'));
   // The server's bundle is written beside this module by the build: there is no source for it to be checked against.
   const entry = './server.js';
   const { render }: { render: (page: PageModel, assets: Assets) => string } = await import(entry);
@@ -72,7 +79,7 @@ export async function createHandler(options: HandlerOptions = {}) {
     const page = pages.find((p) => p.url === wanted);
     if (!page) return next();
     try {
-      const html = `<!doctype html>\n${render(page, { script: `${page.root}${assets.script}`, styles: assets.styles.map((s) => `${page.root}${s}`) })}\n`;
+      const html = `<!doctype html>\n${render(page, assetLinks(assets, page.root))}\n`;
       response.statusCode = 200;
       response.setHeader('content-type', 'text/html; charset=utf-8');
       response.end(request.method === 'HEAD' ? undefined : html);

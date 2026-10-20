@@ -61,6 +61,32 @@ describe('the built site', () => {
     for (const b of live) expect(existsSync(join(out, 'assets/examples', `${b.id}.js`)), b.id).toBe(true);
   });
 
+  it('has the typefaces of the design, latin only, asked for early, and the end of each page', () => {
+    const files = walk(out).map((f) => relative(out, f).replace(/\\/g, '/'));
+    const fonts = files.filter((f) => f.endsWith('.woff2'));
+    expect(fonts.map((f) => f.replace(/-[\w-]{8}\.woff2$/, '')).sort()).toEqual([
+      'assets/inter-latin-wght-normal',
+      'assets/jetbrains-mono-latin-wght-normal',
+    ]);
+    const total = fonts.reduce((sum, f) => sum + statSync(join(out, f)).size, 0);
+    expect(total, 'the fonts are about as big as one image').toBeLessThan(110_000);
+    const html = readFileSync(join(out, 'guide/hydration.html'), 'utf8');
+    for (const font of fonts)
+      expect(html, font).toContain(`<link rel="preload" as="font" type="font/woff2" crossorigin="" href="../${font}">`);
+    // A block that has a name shows it above its code, and a page says where it is written.
+    // (What is text has a marker before it, for a browser that hydrates the page.)
+    expect(html).toMatch(/<div class="code-title">(?:<!--t-->)?The app<\/div>/);
+    expect(html).toMatch(
+      /<footer class="page-meta" data-pagefind-ignore=""><a href="[^"]*\/blob\/main\/docs\/guide\/hydration\.md">(?:<!--t-->)?Edit this page<\/a><\/footer>/,
+    );
+    // Pages change by a fade, where the browser can do it.
+    const css = files
+      .filter((f) => /^assets\/page-.*\.css$/.test(f))
+      .map((f) => readFileSync(join(out, f), 'utf8'))
+      .join('');
+    expect(css).toContain('@view-transition');
+  });
+
   it('links only by relative paths, so that it works under any path of any host', () => {
     for (const page of pages) {
       const html = readFileSync(join(out, page), 'utf8');
@@ -485,7 +511,10 @@ describe('in a browser', () => {
       await copy.waitFor();
       await copy.click();
       await expect.poll(() => copy.textContent()).toBe('Copied');
+      // The button says so by its look as well: it is marked, and the mark goes when the text does.
+      expect(await copy.getAttribute('data-copied')).not.toBeNull();
       expect(await page.evaluate(() => navigator.clipboard.readText())).toBe('npm install pipis');
+      await expect.poll(() => copy.getAttribute('data-copied'), { timeout: 5000 }).toBeNull();
     } finally {
       await page.close();
     }
@@ -521,8 +550,9 @@ describe('in a browser', () => {
       await showExamples(page);
       const before = await page.evaluate(() => document.documentElement.dataset.theme);
       await page.locator('[data-action=theme]').click();
+      // The change is a fade of the page (a view transition), which applies it a frame after it has been asked for.
+      await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).not.toBe(before);
       const after = await page.evaluate(() => document.documentElement.dataset.theme);
-      expect(after).not.toBe(before);
       const frame = page.frames().find((f) => f.url().includes('frame.html'));
       await expect.poll(() => frame?.evaluate(() => document.documentElement.dataset.theme)).toBe(after);
       await page.reload();
@@ -599,7 +629,7 @@ describe('in islands mode', () => {
       await page.waitForFunction(() => document.querySelector('[data-action=edit]')?.hasAttribute('hidden') === false);
       const before = await page.evaluate(() => document.documentElement.dataset.theme);
       await page.locator('[data-action=theme]').click();
-      expect(await page.evaluate(() => document.documentElement.dataset.theme)).not.toBe(before);
+      await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).not.toBe(before);
       await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
       const copy = page.locator('.code .copy').first();
       await copy.click();

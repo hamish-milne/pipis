@@ -1,55 +1,117 @@
-/* The parts of a page that belong to the kit: code, live examples and the search. They use the variables that the site's own style
-   sheet defines: --bg, --surface, --fg, --muted, --border, --accent. */
+/* The parts of a page that belong to the kit: code, live examples and the search. They use what the site's own style sheet defines: the colours (--bg,
+   --surface, --surface-2, --fg, --muted, --border, --accent, --accent-2, --accent-soft, --ring), --radius, --shadow, --ease, the fonts (--font, --mono)
+   and the icons (--i-copy, --i-check). */
 
+/* Code */
 .code,
 .example-code {
   position: relative;
-  margin: 1rem 0;
+  margin: 1.25rem 0;
 }
-.prism-code-editor {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  line-height: 1.55;
-  margin: 0;
-}
-pre.prism-code-editor {
-  --padding-left: 1rem;
-  --padding-top: 0.75rem;
-  --padding-bottom: 0.75rem;
-  overflow-x: auto;
-}
-.copy {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  z-index: 2;
-  padding: 0.15rem 0.5rem;
-  font: inherit;
-  font-size: 0.75rem;
-  color: var(--muted);
+.code {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.code-title {
+  padding: 0.55rem 1rem;
+  font: 600 0.75rem/1.2 var(--mono);
+  color: var(--muted);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.prism-code-editor {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.65;
+  font-variant-ligatures: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+pre.prism-code-editor {
+  --padding-left: 1.1rem;
+  --padding-top: 0.9rem;
+  --padding-bottom: 0.9rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+/* The block is the card, and the code in it has no box of its own. */
+.code .prism-code-editor,
+.example-code .prism-code-editor,
+.demo .prism-code-editor {
+  --pce-bg: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+/* The button that copies a block: it shows when the block is pointed at, and says that it has copied. */
+.copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  font: 500 0.72rem/1.2 var(--font);
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s;
+  transform: translateY(2px);
+  transition:
+    opacity 0.15s,
+    transform 0.2s var(--ease),
+    color 0.15s,
+    border-color 0.15s;
+}
+.copy::before {
+  --icon: var(--i-copy);
+}
+.copy:hover {
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+.copy[data-copied] {
+  color: #15803d;
+  border-color: color-mix(in srgb, #16a34a 45%, var(--border));
+}
+.copy[data-copied]::before {
+  --icon: var(--i-check);
+}
+:root[data-theme='dark'] .copy[data-copied] {
+  color: #4ade80;
 }
 .code:hover .copy,
 .example-code:hover .copy,
-.copy:focus-visible {
+.copy:focus-visible,
+.copy[data-copied] {
   opacity: 1;
+  transform: none;
+}
+@media (hover: none) {
+  .copy {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* A live example: a caption bar, the running example in its frame, then its code. */
 .example {
-  margin: 1.5rem 0;
+  margin: 1.75rem 0;
+  background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   overflow: hidden;
-  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .example-bar {
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 .example-bar-row {
@@ -57,25 +119,64 @@ pre.prism-code-editor {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.4rem 0.9rem;
+  padding: 0.5rem 0.75rem 0.5rem 1rem;
   font-size: 0.8125rem;
   font-weight: 600;
+}
+.example-bar-row > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+/* The example is running: a light that is on. */
+.example-bar-row > span:first-child::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgb(34 197 94 / 0.5);
+  animation: live 2.6s ease-out infinite;
+}
+@keyframes live {
+  0% {
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 0.45rem rgb(34 197 94 / 0);
+  }
+}
+.example-actions {
+  display: flex;
+  gap: 0.4rem;
 }
 .example-actions button,
 .search-close {
   font: inherit;
   font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.15rem 0.6rem;
+  font-weight: 550;
+  padding: 0.3rem 0.8rem;
   color: var(--fg);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.1s;
 }
 .example-actions button:hover,
 .search-close:hover {
-  border-color: var(--accent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: var(--accent-soft);
+}
+.example-actions button:active,
+.search-close:active {
+  transform: scale(0.96);
 }
 .example-actions button[hidden] {
   display: none;
@@ -92,30 +193,34 @@ pre.prism-code-editor {
 .example-code {
   margin: 0;
   border-top: 1px solid var(--border);
+  background: var(--surface);
 }
 /* The editor takes the place of the code that was written for reading, and of its button. (The slot that holds the code says `display: contents`
    in its own style, which only `!important` is stronger than.) */
 .example.editing .example-code > :not(.editor-host) {
   display: none !important;
 }
-.example .prism-code-editor {
-  border: 0;
-  border-radius: 0;
-}
 .example .editor {
   min-height: 6rem;
+  animation: appear 0.25s var(--ease);
 }
 .example .editor .prism-code-editor {
   max-height: 32rem;
 }
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
 .example-error {
   margin: 0;
-  padding: 0.6rem 0.9rem;
-  font-family: ui-monospace, Consolas, monospace;
+  padding: 0.65rem 1rem;
+  font-family: var(--mono);
   font-size: 0.8125rem;
   white-space: pre-wrap;
   color: #b42318;
-  background: color-mix(in srgb, #d92d20 10%, transparent);
+  background: color-mix(in srgb, #d92d20 9%, transparent);
   border-top: 1px solid var(--border);
 }
 .example-error[hidden] {
@@ -125,67 +230,121 @@ pre.prism-code-editor {
   color: #fda29b;
 }
 
-/* The search */
+/* The search: a dialog that opens over the page and closes the same way. */
 dialog.search {
-  width: min(40rem, calc(100vw - 2rem));
-  max-height: 80vh;
-  margin: 10vh auto 0;
+  display: none;
+  flex-direction: column;
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: 78vh;
+  margin: 9vh auto 0;
   padding: 0;
   color: var(--fg);
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgb(0 0 0 / 0.3);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px -20px rgb(8 10 18 / 0.5);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+  transition:
+    opacity 0.2s,
+    transform 0.28s var(--ease),
+    overlay 0.28s allow-discrete,
+    display 0.28s allow-discrete;
+}
+dialog.search[open] {
+  display: flex;
+  opacity: 1;
+  transform: none;
+}
+@starting-style {
+  dialog.search[open] {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
 }
 dialog.search::backdrop {
-  background: rgb(0 0 0 / 0.4);
+  background: rgb(8 10 18 / 0);
+  backdrop-filter: blur(0);
+  transition:
+    background 0.28s,
+    backdrop-filter 0.28s,
+    overlay 0.28s allow-discrete,
+    display 0.28s allow-discrete;
+}
+dialog.search[open]::backdrop {
+  background: rgb(8 10 18 / 0.5);
+  backdrop-filter: blur(5px);
+}
+@starting-style {
+  dialog.search[open]::backdrop {
+    background: rgb(8 10 18 / 0);
+    backdrop-filter: blur(0);
+  }
 }
 dialog.search form {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  gap: 0.6rem;
+  padding: 0.85rem;
   border-bottom: 1px solid var(--border);
 }
 dialog.search input {
   flex: 1;
+  min-width: 0;
   font: inherit;
-  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  padding: 0.65rem 0.9rem 0.65rem 2.6rem;
   color: inherit;
-  background: var(--surface);
+  background: var(--surface) url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e96a9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>")
+    0.85rem center / 1.15rem no-repeat;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+dialog.search input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 .search-results {
   margin: 0;
   padding: 0.5rem;
   list-style: none;
   overflow-y: auto;
-  max-height: calc(80vh - 5rem);
+  max-height: calc(78vh - 5rem);
+  scrollbar-width: thin;
 }
 .search-results a {
   display: block;
-  padding: 0.6rem 0.75rem;
+  padding: 0.7rem 0.85rem;
   color: inherit;
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: 10px;
+  transition: background 0.12s;
 }
 .search-results a:hover,
 .search-results a:focus-visible {
-  background: var(--surface);
+  background: var(--accent-soft);
 }
 .search-results strong {
   display: block;
+  font-weight: 650;
 }
 .search-results .search-where {
   display: block;
   font-size: 0.75rem;
+  font-weight: 500;
   color: var(--accent);
 }
 .search-filters {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.7rem 0.85rem;
   border-bottom: 1px solid var(--border);
 }
 .search-filters[hidden] {
@@ -200,7 +359,7 @@ dialog.search input {
   display: inline-flex;
   align-items: baseline;
   gap: 0.35rem;
-  padding: 0.1rem 0.6rem;
+  padding: 0.15rem 0.65rem;
   font: inherit;
   font-size: 0.75rem;
   color: var(--muted);
@@ -208,15 +367,22 @@ dialog.search input {
   border: 1px solid var(--border);
   border-radius: 999px;
   cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 .search-chip:hover {
   color: var(--fg);
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 .search-chip[aria-pressed='true'] {
-  color: var(--bg);
-  background: var(--accent);
-  border-color: var(--accent);
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--accent-2)));
+  border-color: transparent;
+}
+:root[data-theme='dark'] .search-chip[aria-pressed='true'] {
+  color: #0a0c12;
 }
 .search-count {
   opacity: 0.7;
@@ -229,9 +395,9 @@ dialog.search input {
 .search-results mark {
   color: var(--fg);
   background: color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: 2px;
+  border-radius: 3px;
 }
 .search-none {
-  padding: 0.75rem;
+  padding: 0.85rem;
   color: var(--muted);
 }

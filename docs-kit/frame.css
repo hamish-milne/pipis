@@ -2,14 +2,14 @@
 :root {
   color-scheme: light;
   --bg: #ffffff;
-  --fg: #1f2328;
-  --border: #d0d7de;
+  --fg: #12141c;
+  --border: #e3e5ee;
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0d1117;
-  --fg: #e6edf3;
-  --border: #30363d;
+  --bg: #0a0c12;
+  --fg: #e9ebf2;
+  --border: #222736;
 }
 * {
   box-sizing: border-box;
@@ -27,6 +27,41 @@ select,
 textarea {
   font: inherit;
 }
+/* The examples are small UIs, and the frame gives the plain elements a little care, so that they look like part of the page. Anything an example styles itself
+   is its own. */
+button,
+input,
+select,
+textarea {
+  color: inherit;
+  background: color-mix(in srgb, var(--fg) 5%, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.75rem;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    box-shadow 0.15s;
+}
 button {
   cursor: pointer;
+  font-weight: 500;
+}
+button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--fg) 30%, var(--border));
+  background: color-mix(in srgb, var(--fg) 9%, var(--bg));
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid color-mix(in srgb, #7c5cff 55%, transparent);
+  outline-offset: 1px;
 }

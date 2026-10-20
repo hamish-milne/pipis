@@ -33,7 +33,7 @@ function rendererOf(page: PageModel): MarkdownRenderer {
       return createElement(`h${token.depth}` as 'h1', { id, children: [...inner, anchor] });
     }
     if (token.type === 'code') {
-      const { language, block } = token as DocCode;
+      const { language, block, title } = token as DocCode;
       if (block) {
         return (
           <Island
@@ -63,11 +63,20 @@ function rendererOf(page: PageModel): MarkdownRenderer {
           />
         );
       }
-      return <Island name="code" component={Code} props={{ content: highlighted(token.text, language) }} />;
+      return <Island name="code" component={Code} props={{ title, content: highlighted(token.text, language) }} />;
     }
     return renderToken(token, renderer);
   };
   return renderer;
+}
+
+/** Where the page is written, for the reader who sees what is wrong with it. (The search has no use for it.) */
+function EditLink(props: { page: PageModel }): JSXElement {
+  return (
+    <footer className="page-meta" data-pagefind-ignore="">
+      <a href={`${props.page.repoHome}/blob/main/docs/${props.page.file}`}>Edit this page</a>
+    </footer>
+  );
 }
 
 export function Navigation(props: { page?: PageModel }): JSXElement {
@@ -113,6 +122,7 @@ export function Article(props: { page?: PageModel }): JSXElement {
               {page.merged.map((one) => (
                 <article id={pageId(one.file)}>
                   <Markdown tokens={one.tokens} renderer={rendererOf(one)} />
+                  <EditLink page={one} />
                 </article>
               ))}
             </>
@@ -126,6 +136,7 @@ export function Article(props: { page?: PageModel }): JSXElement {
                 <span hidden data-pagefind-filter={`tag:${tag}`} />
               ))}
               <Markdown tokens={page.tokens} renderer={rendererOf(page)} />
+              <EditLink page={page} />
             </article>
           ))}
     </Static>
