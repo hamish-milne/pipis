@@ -30,12 +30,6 @@ export const BARREL = 'index';
 /** The entry points of the package: what `exports` in package.json names, so what a user can import. */
 export const ENTRY_POINTS = ['index', 'jsx-runtime', 'jsx-dev-runtime'];
 
-/**
- * Helpers for the documentation site. They sit beside the library and use it, but are not part of the package, so they may import
- * from outside (a Markdown parser, a highlighter) and nothing in the library may import them.
- */
-export const EXTRAS = ['markdown', 'highlight'];
-
 const moduleName = (file: string) => file.replace(/\.tsx?$/, '');
 
 /** Every source file in src/pipis that is not a test, by module name. */

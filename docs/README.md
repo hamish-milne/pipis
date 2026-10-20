@@ -19,6 +19,13 @@ A small front-end framework for JSX: no virtual DOM, no re-rendering, and a comp
 - [Caveats and non-goals](guide/non-goals.md): what it does not do.
 - [Cookbook](guide/cookbook.md): using it with other state libraries, and with libraries that draw.
 
+## Demos
+
+- [Demos](demos/README.md): whole apps, running, with their source.
+- [Todo list](demos/todo.md): array state, a row for each item, and reordering.
+- [Weather](demos/weather.md): loading data with `Suspense`, and a theme kept in storage.
+- [Feedback](demos/feedback.md): context, portals, a modal, and an error boundary.
+
 ## Reference
 
 - [API reference](reference/api.md): every export, with its signature. Generated from the source.

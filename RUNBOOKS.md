@@ -24,7 +24,7 @@ One package, **`pipis`**, built by `tools/pack.ts`.
 - **One version.** It is `version` in the **root `package.json`**, and nowhere else. The packer writes it into the published manifest.
 - **The JavaScript is the source with its types blanked out,** not a compiler's re-emission. `tools/strip-types.ts` uses Node's own type stripping (`module.stripTypeScriptTypes`), which replaces every type with whitespace, so **each line is where it is in `src/pipis/`**. A stack trace from an installed `pipis` names the line to open in the repository. The only edit is `.ts` to `.js` in relative import paths, which is the same length. This is why the code is limited to erasable TypeScript (no `enum`, no `namespace`, no parameter properties), and `tools/pack.test.ts` checks that each `dist/*.js` has the line count of its source.
 - **The declarations (`.d.ts`) come from `tsc`** (`tsconfig.types.json`, declaration-only), with relative imports written `./x.js`.
-- **Three entry points:** `pipis`, `pipis/jsx-runtime`, `pipis/jsx-dev-runtime`. `LLM.md`, `README.md` and `LICENSE` are in the tarball. The documentation helpers (`markdown`, `highlight`) are not.
+- **Three entry points:** `pipis`, `pipis/jsx-runtime`, `pipis/jsx-dev-runtime`. `LLM.md`, `README.md` and `LICENSE` are in the tarball. The documentation site (`docs-kit/`, `site/`) is not.
 - Nothing is bundled or minified: an app bundles the library, and the files should read like the source.
 - `engines` is deliberately not copied to the published manifest: the root's Node requirement is for the repository's tooling.
 

@@ -2,18 +2,12 @@
 import { defineConfig } from 'vite-plus';
 import { playwright } from 'vite-plus/test/browser-playwright';
 import tailwindcss from '@tailwindcss/vite';
+import { docsSite } from './site/vite-plugin.ts';
 
 export default defineConfig({
-  plugins: [tailwindcss()],
-  build: {
-    modulePreload: false,
-    rollupOptions: {
-      input: {
-        main: 'index.html',
-        docs: 'docs.html',
-      },
-    },
-  },
+  // The documentation site: `vp dev` serves it (and reloads on a change), `vp build` writes it into dist/ (site/vite-plugin.ts).
+  // Tailwind is for the demo apps only.
+  plugins: [tailwindcss(), docsSite()],
   test: {
     // Each project says what it runs: an `include` here would be merged into both.
     // A fresh process per file, so a test that leaves a subscriber or a DOM node behind cannot colour the next one.
@@ -23,8 +17,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/pipis/**/*.{ts,tsx}'],
-      // The docs site's markdown and highlighting helpers sit beside the library but are not part of it.
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/pipis/markdown.tsx', 'src/pipis/highlight.tsx'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**'],
       reporter: ['text-summary', 'json-summary', 'json', 'html'],
       reportsDirectory: 'coverage',
       reportOnFailure: true,
@@ -41,6 +34,16 @@ export default defineConfig({
           name: 'jsdom',
           environment: 'jsdom',
           include: ['src/**/*.test.{ts,tsx}', 'tools/**/*.test.{ts,mjs}'],
+        },
+      },
+      // The documentation kit and the site: Node tests (the site test starts its own Chromium), with no DOM of their own.
+      {
+        extends: true,
+        test: {
+          name: 'site',
+          environment: 'node',
+          setupFiles: [],
+          include: ['docs-kit/**/*.test.ts', 'site/**/*.test.ts'],
         },
       },
       {
@@ -81,11 +84,14 @@ export default defineConfig({
       // What each feature costs an app, against the committed baseline. `size` prints the table.
       size: { command: 'node tools/size.ts', cache: false },
       'size:check': { command: 'node tools/size.ts --check', cache: false },
+      // The documentation site, into dist/. `node site/serve.ts` serves it, and `vp dev` serves it with reloading.
       build: { command: 'vp build', cache: false },
+      // The site is built under a path of its own and used in Chromium: every page opened, every example run, one edited, the search used.
+      'site:test': { command: 'vp test run --project site', cache: false },
       all: {
         command: 'echo all green',
         cache: false,
-        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'deps', 'docs', 'actions', 'size:check', 'pack:test', 'build'],
+        dependsOn: ['check', 'lint', 'fmt:check', 'test', 'deps', 'docs', 'actions', 'size:check', 'pack:test', 'build', 'site:test'],
       },
     },
   },
@@ -145,14 +151,12 @@ export default defineConfig({
       {
         files: [
           'src/test/**',
-          'src/docs/**',
           'src/samples/**',
-          'src/*.tsx',
           'src/pipis/*.test.ts',
           'src/pipis/*.test.tsx',
-          'src/pipis/markdown.tsx',
-          'src/pipis/highlight.tsx',
           'tools/**',
+          'docs-kit/**',
+          'site/**',
           '*.ts',
         ],
         env: { browser: true, node: true, es2022: true },

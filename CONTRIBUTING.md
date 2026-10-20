@@ -23,7 +23,8 @@ The toolchain is [Vite+](https://viteplus.dev) (`vp`): tests, lint, format, the 
 | `pnpm vp run check`             | The type check (`tsc -p .`).                                                                                |
 | `pnpm vp lint`                  | Lint. `pnpm vp run lint` is the strict form CI uses (no warnings, no unused disable comments).              |
 | `pnpm vp fmt`                   | Format. It rewrites files, so run it _before_ a scripted find-and-replace.                                  |
-| `pnpm vp dev` / `pnpm vp build` | The samples and docs site, and its production build.                                                        |
+| `pnpm vp dev`                   | The documentation site, served with a reload when the docs, the site or the library change.                  |
+| `pnpm vp run build`             | The site's production build, into `dist/` (`node site/serve.ts` serves it). `site:test` tests it in Chromium. |
 | `pnpm vp run size`              | What each feature costs an app, in bytes (`size:check` is the gate and is part of `all`).                  |
 | `node tools/bench.ts`           | The micro-benchmark, in real Chromium. Run by hand before and after a change to a hot path.                |
 
@@ -45,12 +46,12 @@ When a rule does not cover a case, decide by these.
 
 ```text
 src/pipis/      the library: core.ts, reactive.ts, dynamic.ts, svg.ts, and the jsx-runtime entry points, with a *.test.ts beside each
-                (markdown.tsx and highlight.tsx are helpers for the docs site: they use dev dependencies and are not exported)
 src/test/       helpers and setup for the tests (not part of the library)
 src/types/      type-level tests: code that is compiled by `tsc` and never run (LLM.md's snippets)
 docs/           the documentation, in Markdown: start/, guide/, reference/ (generated) and adr/ (the design decisions)
-src/docs/       the docs site, which renders docs/ in one scroll for now
-src/samples/    sample apps
+src/samples/    the demo apps, which the site shows (`demo-app.html` is the page they are built into)
+docs-kit/       the documentation site's engine: Markdown to pages, the live examples and their editor, the search. It knows nothing of pipis
+site/           this site, on the kit: the layout (written in pipis), the style sheet, the adapter that mounts an example, the build and the test
 tools/          repository tooling, written in TypeScript and run directly by Node (the action-pin check, the size tool, the benchmark,
                 the import-layer check, and the packer and its test)
 docs/adr/      the design assumptions, one record each, with the tests and measurements that could disprove them

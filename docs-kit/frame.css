@@ -1,0 +1,32 @@
+/* The page inside an example's frame: only a background, a font, and room around the example. */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --border: #d0d7de;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --border: #30363d;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  padding: 1rem;
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}

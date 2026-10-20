@@ -57,6 +57,21 @@ A `check` block is a module too, but it may import other packages that the repos
 
 `PIPIS_DOCS_SHEET=1 pnpm vp run docs` also writes `out/docs-sheet.html`: the HTML of every live example on one page, for looking at.
 
+### The site
+
+`pnpm vp dev` serves the documentation, and rebuilds and reloads the browser when a page, the site or the library changes (a change to a demo app in `src/samples/` hot-reloads, as in any Vite app). `pnpm vp run build` writes it into `dist/`, and `node site/serve.ts` serves that folder (the example frames and the search need an HTTP address, not a `file://` one). The pages are this Markdown; their order is the order of the links in [README.md](README.md), so a new page is added there. The output is plain files with relative links: put the folder under any path of any host.
+
+What a page gets from the Markdown:
+
+- A `live` block is shown as a running example above its code, in an `iframe` of its own, so an example cannot disturb the page and the page cannot disturb it. The frame loads when it is near the screen. **Edit** turns the code into an editor and re-runs the example as it is typed; **Reset** puts it back. An error in the code is shown under the editor and the last version that ran stays on show. The editor and the compiler are downloaded only when Edit is first used.
+- Editing compiles the code in the browser with [Sucrase](https://github.com/alangpierce/sucrase), which takes out the types and compiles the JSX but does not check types. The type check is the job of `pnpm vp run docs`, so an edited example can be wrong in ways the editor does not say.
+- `height=N` fixes the height of the frame; without it the frame follows the height of its content.
+- A block whose language is `demo` names a demo app of `src/samples/` (its body is the file name without the extension: `todo`). The site shows the app in a frame with its source below. To GitHub it is a plain block that names the demo.
+- A heading has the anchor that GitHub gives it, and a link to another `.md` file becomes a link to its page. A link to a file outside `docs/` (such as `../LLM.md`) goes to that file in the repository.
+- The search reads the text of each page. **Ctrl+K** (or **⌘K**) opens it.
+
+The site is split in two. `docs-kit/` is the engine: it knows Markdown, pages, frames, the editor and the search, and nothing of pipis. `site/` is this site: its layout (a pipis component, run once for each page when the site is built), its style sheet, and `site/adapter.ts`, the few lines that mount an example's default export in a frame. Another library's docs are the same kit with a different adapter and layout. `site/site.test.ts` builds the site under a path of its own and uses it in Chromium: every page is opened, every example run, one edited, the search used, the theme switched.
+
 ### Everything else on a page
 
 - One `#` heading per page, `##` for sections. A page starts with one paragraph saying what it is for.

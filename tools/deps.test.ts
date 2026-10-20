@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { BARREL, ENTRY_POINTS, EXTRAS, LIBRARY, TYPES_ONLY, importsOf, runtimeGraph, sourceFiles } from './deps.ts';
+import { BARREL, ENTRY_POINTS, LIBRARY, TYPES_ONLY, importsOf, runtimeGraph, sourceFiles } from './deps.ts';
 
 // Holds the runtime import graph to its layering, so that a feature cannot end up in every bundle by accident: an `import` of something
 // only used as a type has to be `import type`, and a module that needs another has to say so in LIBRARY (tools/deps.ts). The numbers this
@@ -9,7 +9,7 @@ describe('the library layers', () => {
   const graph = runtimeGraph();
 
   it('has every module of src/pipis classified, so a new file is placed on purpose', () => {
-    const known = new Set([BARREL, ...Object.keys(LIBRARY), ...TYPES_ONLY, ...EXTRAS]);
+    const known = new Set([BARREL, ...Object.keys(LIBRARY), ...TYPES_ONLY]);
     expect(sourceFiles().filter((m) => !known.has(m))).toEqual([]);
     expect([...known].filter((m) => !sourceFiles().includes(m))).toEqual([]);
   });
@@ -47,12 +47,6 @@ describe('the library layers', () => {
     };
     for (const module of graph.keys()) visit(module, []);
     expect(cycles).toEqual([]);
-  });
-
-  it('depends on no documentation helper: nothing in the library imports an extra', () => {
-    for (const module of Object.keys(LIBRARY)) {
-      expect([...(graph.get(module) ?? [])].filter((n) => EXTRAS.includes(n))).toEqual([]);
-    }
   });
 
   it('has a barrel that re-exports exactly the modules that make up the main entry point', () => {
